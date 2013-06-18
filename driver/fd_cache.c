@@ -18,7 +18,7 @@
 #include "fd_cache.h"
 
 #define SYSMON_DEBUG
-#include "debug.h"
+#include "./../share/debug.h"
 
 //initize an new fd cache area of process record
 void fd_cache_initize(process_record * record)
@@ -171,7 +171,7 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 
 			//settle
 			record->hot_fd_cache[fit_index] = fd_record;
-			record->hot_cache_time[fit_index] = __FIX_ME__;
+			//record->hot_cache_time[fit_index] = __FIX_ME__;
 
 			//add reference
 			record->hot_count++;

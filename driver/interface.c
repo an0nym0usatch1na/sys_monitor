@@ -4,16 +4,19 @@
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/device.h>
-#include <asm/page.h>
+#include <linux/fs.h>
 #include <linux/sched.h>
+#include <linux/cdev.h>
+#include <asm/page.h>
 #include <asm/current.h>
+#include <asm/uaccess.h>
 
 #include "sys_monitor.h"
 #include "log.h"
 #include "interface.h"
 
 #define SYSMON_DEBUG
-#include "debug.h"
+#include "./../share/debug.h"
 
 //
 // global var definition

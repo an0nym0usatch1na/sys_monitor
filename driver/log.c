@@ -14,7 +14,7 @@
 #include "interface.h"
 
 #define SYSMON_DEBUG
-#include "debug.h"
+#include "./../share/debug.h"
 
 //global vars
 log_item ** thread_log_cache = NULL;

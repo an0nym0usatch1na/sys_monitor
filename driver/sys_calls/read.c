@@ -9,7 +9,7 @@
 #include "./../fd_cache.h"
 
 #define SYSMON_DEBUG
-#include "./../debug.h"
+#include "./../../share/debug.h"
 
 #include "read.h"
 

@@ -8,7 +8,7 @@
 #include "trace_dog.h"
 
 #define SYSMON_DEBUG
-#include "debug.h"
+#include "./../share/debug.h"
 
 //global vars
 int g_ref_count = 0;

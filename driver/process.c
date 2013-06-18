@@ -16,7 +16,7 @@
 #include "process.h"
 
 #define SYSMON_DEBUG
-#include "debug.h"
+#include "./../share/debug.h"
 
 //main cache
 process_record ** process_cache = NULL;

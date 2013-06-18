@@ -8,7 +8,7 @@
 #include "./../process.h"
 
 #define SYSMON_DEBUG
-#include "./../debug.h"
+#include "./../../share/debug.h"
 
 #include "fork.h"
 
