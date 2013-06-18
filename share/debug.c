@@ -56,7 +56,7 @@ void log_event(const char log_level, const char * file, int line, const char * f
 
 #else
 
-#include <stdio.h>
+#include <string.h>
 #include <stdarg.h>
 
 //user version of log_event
@@ -82,7 +82,7 @@ void log_event(const char log_level, const char * file, int line, const char * f
 		this_file = (char *)file;
 	}
 
-	fprintf(stderr, "[SYSMON][%c][%s:%d]%s",
+	printf("[SYSMON][%c][%s:%d]%s",
 			log_level,
 			this_file,
 			line,

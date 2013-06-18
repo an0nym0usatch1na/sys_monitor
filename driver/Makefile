@@ -7,7 +7,7 @@ CROSS_COMPILE = arm-eabi-
 ifeq ($(KERNELRELEASE),)
 	#Normal Makefile
 	# develop pc for goldfish
-	KERNELDIR ?= /home/anonymous/android/goldfish
+	KERNELDIR ?= /home/anonymous/android/sources/goldfish
 	
 	# develop pc for msm
 	#KERNELDIR ?= /home/anonymous/android/msm
@@ -26,5 +26,5 @@ else
 	#kbuild part of makefile	
 	obj-m := sys_monitor.o 
 	
-	sys_monitor-y := main.o log.o trace_dog.o ./sys_calls/open.o ./sys_calls/close.o ./sys_calls/read.o ./sys_calls/write.o ./sys_calls/ioctl.o ./sys_calls/fork.o ./sys_calls/exit.o ./sys_calls/exec.o interface.o debug.o process.o fd_cache.o
+	sys_monitor-y := main.o log.o trace_dog.o ./sys_calls/open.o ./sys_calls/close.o ./sys_calls/read.o ./sys_calls/write.o ./sys_calls/ioctl.o ./sys_calls/fork.o ./sys_calls/exit.o ./sys_calls/exec.o interface.o ./../share/debug.o process.o fd_cache.o
 endif

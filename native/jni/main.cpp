@@ -8,8 +8,8 @@
 
 #define SYSMON_DEBUG
 extern "C" {
-	#include "./../../sys_monitor/log.h"
-	#include "./../../sys_monitor/debug.h"
+	#include "./../../share/log_def.h"
+	#include "./../../share/debug.h"
 }
 
 #include "sys_reader.h"

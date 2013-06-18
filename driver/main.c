@@ -17,7 +17,7 @@
 #include "./sys_calls/exec.h"
 
 #define SYSMON_VERBOSE
-#include "debug.h"
+#include "./../share/debug.h"
 
 MODULE_LICENSE("GPL");
 

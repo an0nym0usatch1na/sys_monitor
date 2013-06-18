@@ -51,7 +51,6 @@ bool log_init(void)
 	
 #endif
 
-
 	PDEBUG("log module initize success, total %d byte(s) allocated\n", size);
 	
 	//success
