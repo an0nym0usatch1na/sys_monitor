@@ -1,1 +1,8 @@
-an powerful android system event monitor
+An powerful android system event monitor now developing
+
+How to compile:
+
+1. Before complie, you need android ndk, kernel source code and build environment ready;
+2. Compile native command line tool, nav to native directory and type ndk-build;
+3. Compile kernel mode driver, nav to driver directory and type make.
+
