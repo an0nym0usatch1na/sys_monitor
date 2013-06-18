@@ -20,7 +20,7 @@ default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE)
 
 clean:
-	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions ./sys_calls/*.o
+	rm -rf *.o *~ core .depend .*.cmd *.ko *.order *.symvers *.mod.c .tmp_versions ./sys_calls/*.o
 
 else
 	#kbuild part of makefile	
