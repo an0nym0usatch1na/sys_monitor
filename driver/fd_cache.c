@@ -138,15 +138,62 @@ int kill_oldest_cache(process_record * record)
 }
 
 //get index equal or nearest bigger
-int get_index_bigger_or_equal(process_record * record, int fd)
+int get_insert_index(process_record * record, int fd)
 {
+	int fit_fd = 0;
+	int l = 0;
+	int r = record->hot_count - 1;
+
+	while (l <= r)
+	{
+		int m = (l + r) / 2;
+		int prev_fd = -1;
+		int next_fd = 0x7FFFFFFF;
+		int t_fd = -1;
+
+		//assert last
+		fit_fd = record->hot_count - 1;
+
+		t_fd = record->hot_fd_cache[m]->fd;
+		if (0 != m)
+		{
+			prev_fd = record->hot_fd_cache[m - 1]->fd;
+		}
+		if (record->hot_count - 1 != m)
+		{
+			next_fd = record->hot_fd_cache[m + 1]->fd;
+		}
+
+		if (prev_fd <= fd && t_fd >= fd)
+		{
+			fit_fd = t_fd;
+
+			break;
+		}
+		
+		if (t_fd <= fd && next_fd >= fd)
+		{
+			fit_fd = t_fd + 1;
+
+			break;
+		}
+
+		if (t_fd < fd)
+		{
+			l = m + 1;
+		}
+		else
+		{
+			r = m - 1;
+		}
+	}
 }
 
 void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 {
 	int i = 0;
 	//first, find an fit index
-	int fit_index = get_index_bigger_or_equal(record, fd_record->fd);
+	int fit_index = get_insert_index(record, fd_record->fd);
 		
 	if (record->hot_count == HOT_FD_CACHE_SIZE)
 	{
@@ -171,7 +218,7 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 
 			//settle
 			record->hot_fd_cache[fit_index] = fd_record;
-			//record->hot_cache_time[fit_index] = __FIX_ME__;
+			record->hot_cache_time[fit_index] = __FIX_ME__;
 
 			//add reference
 			record->hot_count++;

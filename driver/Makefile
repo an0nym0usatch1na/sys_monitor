@@ -7,7 +7,7 @@ CROSS_COMPILE = arm-eabi-
 ifeq ($(KERNELRELEASE),)
 	#Normal Makefile
 	# develop pc for goldfish
-	KERNELDIR ?= /home/anonymous/android/goldfish
+	KERNELDIR ?= /home/anonymous/android/sources/goldfish
 	
 	# develop pc for msm
 	#KERNELDIR ?= /home/anonymous/android/msm
