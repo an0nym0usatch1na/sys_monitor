@@ -35,11 +35,9 @@ void fd_cache_initize(process_record * record)
     
 	record->fd_count = 0;
 	record->hot_count = 0;
-	record->fd_indexer = 0;
     record->file_fd_head = NULL;
     
 	memset(record->hot_fd_cache, 0, sizeof(void *) * HOT_FD_CACHE_SIZE);
-	memset(record->hot_cache_time, 0, sizeof(int) * HOT_FD_CACHE_SIZE);
 
 	PDEBUG("process \"%s\" initized fd_cache, cache ready to use\n", record->filename);
 
@@ -81,13 +79,13 @@ void fd_cache_initize(process_record * record)
 	//run testcase, check and delete
 	for (i = 0; i < 100; i++)
 	{
-		char * path = get_cache_by_fd(fds[i]);
-		if (fds[i] != (unsigned int)path[0])
+		char * path = get_cache_by_fd((unsigned int)i);
+		if (i != (int)path[0])
 		{
-			PERROR("testcase error, fd #%d not match path #%d\n", fds[i], (int)path[0]);
+			PERROR("testcase error, fd #%d not match path #%d\n", i, (int)path[0]);
 		}
 
-		delete_cache_by_fd(fds[i]);
+		delete_cache_by_fd((unsigned int)i);
 	}
 
 	if (0 != record->fd_count ||
@@ -122,15 +120,45 @@ void fd_cache_cleanup(process_record * record)
 	PDEBUG("process \"%s\" fd_cache cleanuped\n", record->filename);
 }
 
-//find record in current process hot cache, may fail, always called before find in link to speed up
-file_fd_record * find_record_in_hot_cache(process_record * record, unsigned int fd, int & index)
+//find record in current process hot cache, may fail, use binary search, always called before find in link to speed up
+file_fd_record * find_record_in_hot_cache(process_record * record, unsigned int fd)
 {
-	index = 0;
+	int l = 0;
+	int r = record->hot_count - 1;
+	int	index = -1;
 
-	return NULL;
+	while (l <= r)
+	{
+		int m = (l + r) / 2;
+		unsigned int t_fd = record->hot_fd_cache[m]->fd;
+
+		if (t_fd < fd)
+		{
+			l = m + 1;
+		}
+		else if (t_fd > fd)
+		{
+			r = m - 1;
+		}
+		else	//t_fd == fd
+		{
+			index = m;
+
+			break;
+		}
+	}
+
+	if (-1 != index)
+	{
+		return record->hot_fd_cache[index];
+	}
+	else
+	{
+		return NULL;
+	}
 }
 
-//find record in current process, directly from record link, usually very slow
+//find record in current process, directly from full record link, usually very slow
 file_fd_record * find_record_in_link(process_record * record, unsigned int fd)
 {
 	file_fd_record * res = NULL;
@@ -152,14 +180,18 @@ file_fd_record * find_record_in_link(process_record * record, unsigned int fd)
 }
 
 //allocate an file record from memory and initize it
-file_fd_record * allocate_file_fd_record(int fd, char * path)
+file_fd_record * allocate_file_fd_record(unsigned int fd, char * path)
 {
     file_fd_record * fd_record = NULL;
 
     fd_record = (file_fd_record *)kmalloc(sizeof(file_fd_record), GFP_KERNEL);
     if (NULL != fd_record)
     {
-        int len = strlen(path);
+        int len = 0;
+		
+		fd_record->fd = fd;
+		
+		len = strlen(path);
         fd_record->filename = (char *)kmalloc(len + 1, GFP_KERNEL);
         if (NULL != fd_record->filename)
         {
@@ -185,30 +217,6 @@ file_fd_record * allocate_file_fd_record(int fd, char * path)
 	}
 
 	return fd_record;	
-}
-
-int kill_oldest_cache(process_record * record)
-{
-	int i = 0;
-	int min_index = 0;
-	int min = record->hot_cache_time[0];
-	
-	//find min age, which means oldest
-	for (i = 1; i < HOT_FD_CACHE_SIZE; i++)
-	{
-		if (min > record->hot_cache_time[i])
-		{
-			min = record->hot_cache_time[i];
-			min_index = i;
-		}
-	}
-
-	PVERBOSE("kill oldest cache(age: %d, path: \"%s\", id: %d)", min, record->hot_fd_cache[min_index]->filename, min_index);
-
-	record->hot_fd_cache[min_index] = NULL;
-	record->hot_cache_time[min_index] = 0;
-
-	return min_index;
 }
 
 //get index that fits fd to insert in
@@ -271,29 +279,75 @@ int get_insert_index(process_record * record, unsigned int fd)
 void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 {
 	int i = 0;
-	//first, find an fit index
-	int fit_index = get_insert_index(record, fd_record->fd);
+	int fit_index = 0;
+	int oldest_index = -1;
 
-	return;
-
+	//if full, then we need to make an room
 	if (record->hot_count == HOT_FD_CACHE_SIZE)
 	{
-		//full, we need to make an room
-		int index = kill_oldest_cache(record);
+		//hod cache link`s last element must be oldest because we always insert young element to head
+		file_fd_record * oldest_record = record->hot_fd_head->time_prev;
+		oldest_index = oldest_record->hot_index;
+
+		//break up hot cache link
+    	oldest_record->time_prev->time_next = oldest_record->time_next;
+		oldest_record->time_next->time_prev = oldest_record->time_prev;
+
+		PVERBOSE("kill oldest cache(path: \"%s\", fd: %d, id: %d)", oldest_record->filename, oldest_record->fd, oldest_record->hot_index);
 	}
-	else
+
+	//find the place to insert
+	fit_index = get_insert_index(record, fd_record->fd);
+
+	PVERBOSE("find fit index: %d, oldest_index: %d\n", fit_index, oldest_index);
+		
+	//move
+	if (-1 == oldest_index)
 	{
-		//move
+		//no oldest index need to skip
 		for (i = record->hot_count; i > fit_index; i--)
 		{
 			record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
-			record->hot_cache_time[i] = record->hot_cache_time[i - 1];
-		}	
+			record->hot_fd_cache[i]->hot_index++;
+		}
+	}
+	else if (oldest_index < fit_index)
+	{
+		//oldest in on the left, array move left
+		for (i = oldest_index; i < fit_index; i++)
+		{
+			record->hot_fd_cahce[i] = record->hot_fd_cache[i + 1];
+			record->hot_fd_cache[i]->hot_index--;
+		}
+	}
+	else if (oldest_index > fit_index)
+	{
+		//oldest on the right, array move right
+		for (i = oldest_index; i > fit_index; i--)
+		{
+			record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
+			record->hot_fd_cache[i]->hot_index++;
+		}
+	}
+	else	// (oldest_index == fit_index)
+	{
+		//fit index equals oldest index, perfect, noting need to do
+	}
 
-		//settle
-		record->hot_fd_cache[fit_index] = fd_record;
-		//record->hot_cache_time[fit_index] = __FIX_ME__;
+	//settle
+	record->hot_fd_cache[fit_index] = fd_record;
+	fd_record->hot_index = fit_index;
 
+	//link hot cache up
+	fd_record->time_prev = record->hot_fd_head->time_prev;
+	fd_record->next_time = record->hot_fd_head;
+	record->hot_fd_head->time_prev = fd_record;
+	fd_record->time_prev->time_next = fd_record;
+
+	record->hot_fd_head = fd_record;
+
+	if (-1 == oldest_index)
+	{
 		//add reference
 		record->hot_count++;
 	}
@@ -321,9 +375,10 @@ bool delete_from_record(process_record * record, unsigned int fd)
 {
 	bool b_hot = true;
 	bool suc = false;
+	int del_index = 0;
 	file_fd_record * fd_record = NULL;
 
-	fd_record = find_record_in_hot_cache(record, fd);
+	fd_record = find_record_in_hot_cache(record, fd, del_index);
 	if (NULL == fd_record)
 	{
 		//hot cache failed, go normally
@@ -349,9 +404,20 @@ bool delete_from_record(process_record * record, unsigned int fd)
 		}
 
 		//delete from hot cache
-
 		if (b_hot)
 		{
+			//delete from cache
+			int i = 0;
+			for (i = fd_record; i < record->hot_count - 1; i++)
+			{
+				record->hot_fd_cache[i] = record->hot_fd_cache[i + 1];
+				record->hot_fd_cache[i]->hot_index--;
+			}
+
+			//delete from link
+			fd_record->time_prev->time_next = fd_record->time_next;
+			fd_record->time_next->time_prev = fd_record->time_prev;
+
 			record->hot_count--;
 		}
 

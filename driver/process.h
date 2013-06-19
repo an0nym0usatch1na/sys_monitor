@@ -15,7 +15,12 @@ typedef struct _file_fd_record
 {
 	struct _file_fd_record * prev;
 	struct _file_fd_record * next;
+
+	struct _file_fd_record * time_prev;
+	struct _file_fd_record * time_next;
+
 	unsigned int fd;
+	int hot_index;
 	char * filename;
 } file_fd_record;
 
@@ -37,10 +42,9 @@ typedef struct _process_record
 	struct rw_semaphore file_fd_sem;
 	int fd_count;
 	int hot_count;
-	int fd_indexer;
-	struct _file_fd_record * file_fd_head;							//fd link header
-	struct _file_fd_record * hot_fd_cache[HOT_FD_CACHE_SIZE];		//hot fd cache, sorted
-	int hot_cache_time[HOT_FD_CACHE_SIZE];
+	struct _file_fd_record * file_fd_head;							//fd link header, full link
+	struct _file_fd_record * hot_fd_head;							//hot fd cycle link, not full link, head element must be the youngest
+	struct _file_fd_record * hot_fd_cache[HOT_FD_CACHE_SIZE];		//hot fd cache, inc sorted by fd
 } process_record;
 
 //
