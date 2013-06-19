@@ -142,13 +142,13 @@ static int sys_monitor_init(void)
 		
 	open_operation_init(sys_call_table);
 	read_operation_init(sys_call_table);
-	write_operation_init(sys_call_table);
+	//write_operation_init(sys_call_table);
 	close_operation_init(sys_call_table);
-	ioctl_operation_init(sys_call_table);
+	//ioctl_operation_init(sys_call_table);
 
-	fork_operation_init(sys_call_table);
-	exit_operation_init(sys_call_table);
-	exec_operation_init(sys_call_table);
+	//fork_operation_init(sys_call_table);
+	//exit_operation_init(sys_call_table);
+	//exec_operation_init(sys_call_table);
 
 	PDEBUG("replace completed, module init finish\n");
 
@@ -181,13 +181,13 @@ static void sys_monitor_exit(void)
 {
 	dev_t dev = MKDEV(dev_major, dev_minor);
 
-	exec_operation_cleanup(sys_call_table);
-	exit_operation_cleanup(sys_call_table);
-	fork_operation_cleanup(sys_call_table);
+	//exec_operation_cleanup(sys_call_table);
+	//exit_operation_cleanup(sys_call_table);
+	//fork_operation_cleanup(sys_call_table);
 	
-	ioctl_operation_cleanup(sys_call_table);
+	//ioctl_operation_cleanup(sys_call_table);
 	close_operation_cleanup(sys_call_table);
-	write_operation_cleanup(sys_call_table);
+	//write_operation_cleanup(sys_call_table);
 	read_operation_cleanup(sys_call_table);
 	open_operation_cleanup(sys_call_table);
 	

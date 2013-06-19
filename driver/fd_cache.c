@@ -2,6 +2,7 @@
 #include <linux/unistd.h>
 #include <linux/init.h>
 #include <linux/module.h>
+#include <linux/random.h>
 #include <linux/slab.h>
 #include <linux/semaphore.h>
 #include <linux/mm.h>
@@ -20,9 +21,16 @@
 #define SYSMON_DEBUG
 #include "./../share/debug.h"
 
-//initize an new fd cache area of process record
+#define RUN_TESTCASE
+
+//initize an new fd cache area of process record, called when an new process go into our monitor
 void fd_cache_initize(process_record * record)
 {
+#ifdef RUN_TESTCASE
+	int i = 0;
+	unsigned int fds[100] = { 0 };
+#endif
+
 	init_rwsem(&record->file_fd_sem);
     
 	record->fd_count = 0;
@@ -32,9 +40,68 @@ void fd_cache_initize(process_record * record)
     
 	memset(record->hot_fd_cache, 0, sizeof(void *) * HOT_FD_CACHE_SIZE);
 	memset(record->hot_cache_time, 0, sizeof(int) * HOT_FD_CACHE_SIZE);
+
+	PDEBUG("process \"%s\" initized fd_cache, cache ready to use\n", record->filename);
+
+#ifdef RUN_TESTCASE
+	//prepare testcase
+	for (i = 0; i < 100; i++)
+	{
+		fds[i] = (unsigned int)i;
+	}
+
+	for (i = 0; i < 100; i++)
+	{
+		unsigned int t = 0;
+		int exchange = 0;
+
+		get_random_bytes(&exchange, sizeof(int));
+		exchange = exchange % 100;
+
+		t = fds[i];
+		fds[i] = fds[exchange];
+		fds[exchange] = t;
+	}
+
+	for (i = 0; i < 100; i++)
+	{
+		PDEBUG("[%d]: %d\n", i, fds[i]);
+	}
+
+	//run testcase, insert
+	for (i = 0; i < 100; i++)
+	{
+		char buffer[2];
+		buffer[0] = fds[i];
+		buffer[1] = '\0';
+
+		insert_into_cache(fds[i], buffer);
+	}
+
+	//run testcase, check and delete
+	for (i = 0; i < 100; i++)
+	{
+		char * path = get_cache_by_fd(fds[i]);
+		if (fds[i] != (unsigned int)path[0])
+		{
+			PERROR("testcase error, fd #%d not match path #%d\n", fds[i], (int)path[0]);
+		}
+
+		delete_cache_by_fd(fds[i]);
+	}
+
+	if (0 != record->fd_count ||
+		0 != record->hot_count ||
+		NULL != record->file_fd_head)
+	{
+		PERROR("testcase error, record area not clean\n");
+	}
+	
+	PDEBUG("testcase finish\n");
+#endif
 }
 
-//cleanup fd cache area resource
+//cleanup fd cache area and resource, called when process gone away
 void fd_cache_cleanup(process_record * record)
 {
 	file_fd_record * p = record->file_fd_head;
@@ -51,14 +118,20 @@ void fd_cache_cleanup(process_record * record)
 		kfree(p);
 		p = t;
 	}
+
+	PDEBUG("process \"%s\" fd_cache cleanuped\n", record->filename);
 }
 
-file_fd_record * find_record_in_hot_cache(process_record * record, int fd)
+//find record in current process hot cache, may fail, always called before find in link to speed up
+file_fd_record * find_record_in_hot_cache(process_record * record, unsigned int fd, int & index)
 {
+	index = 0;
+
 	return NULL;
 }
 
-file_fd_record * find_record_in_link(process_record * record, int fd)
+//find record in current process, directly from record link, usually very slow
+file_fd_record * find_record_in_link(process_record * record, unsigned int fd)
 {
 	file_fd_record * res = NULL;
 	file_fd_record * p = record->file_fd_head;
@@ -78,6 +151,7 @@ file_fd_record * find_record_in_link(process_record * record, int fd)
 	return res;
 }
 
+//allocate an file record from memory and initize it
 file_fd_record * allocate_file_fd_record(int fd, char * path)
 {
     file_fd_record * fd_record = NULL;
@@ -137,22 +211,25 @@ int kill_oldest_cache(process_record * record)
 	return min_index;
 }
 
-//get index equal or nearest bigger
-int get_insert_index(process_record * record, int fd)
+//get index that fits fd to insert in
+int get_insert_index(process_record * record, unsigned int fd)
 {
-	int fit_fd = 0;
+	int fit_index = 0;
+	unsigned int prev_fd = -1;
+	unsigned int next_fd = 0xFFFFFFFF;
 	int l = 0;
 	int r = record->hot_count - 1;
 
 	while (l <= r)
 	{
 		int m = (l + r) / 2;
-		int prev_fd = -1;
-		int next_fd = 0x7FFFFFFF;
-		int t_fd = -1;
+		unsigned int t_fd = -1;
+		
+		prev_fd = -1;
+		next_fd = 0xFFFFFFFF;
 
 		//assert last
-		fit_fd = record->hot_count - 1;
+		fit_index = record->hot_count - 1;
 
 		t_fd = record->hot_fd_cache[m]->fd;
 		if (0 != m)
@@ -166,14 +243,14 @@ int get_insert_index(process_record * record, int fd)
 
 		if (prev_fd <= fd && t_fd >= fd)
 		{
-			fit_fd = t_fd;
+			fit_index = m;
 
 			break;
 		}
 		
 		if (t_fd <= fd && next_fd >= fd)
 		{
-			fit_fd = t_fd + 1;
+			fit_index = m + 1;
 
 			break;
 		}
@@ -187,6 +264,8 @@ int get_insert_index(process_record * record, int fd)
 			r = m - 1;
 		}
 	}
+
+	PVERBOSE("found fd #%d insert index at %d, prev fd: %d, next fd: %d\n", fd, fit_index, prev_fd, next_fd);
 }
 
 void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
@@ -194,7 +273,9 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 	int i = 0;
 	//first, find an fit index
 	int fit_index = get_insert_index(record, fd_record->fd);
-		
+
+	return;
+
 	if (record->hot_count == HOT_FD_CACHE_SIZE)
 	{
 		//full, we need to make an room
@@ -202,36 +283,24 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 	}
 	else
 	{
-		//find fit index
-		if (-1 == fit_index)
+		//move
+		for (i = record->hot_count; i > fit_index; i--)
 		{
-			//into the last one
-		}
-		else
-		{
-			//move
-			for (i = record->hot_count; i > fit_index; i--)
-			{
-				record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
-				record->hot_cache_time[i] = record->hot_cache_time[i - 1];
-			}	
+			record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
+			record->hot_cache_time[i] = record->hot_cache_time[i - 1];
+		}	
 
-			//settle
-			record->hot_fd_cache[fit_index] = fd_record;
-			record->hot_cache_time[fit_index] = __FIX_ME__;
+		//settle
+		record->hot_fd_cache[fit_index] = fd_record;
+		//record->hot_cache_time[fit_index] = __FIX_ME__;
 
-			//add reference
-			record->hot_count++;
-		}
+		//add reference
+		record->hot_count++;
 	}
-
-	//find best fit room
-
-	//settle down
 }
 
 //allocate and insert into current process record`s fd record link
-file_fd_record * insert_into_link(process_record * record, int fd, char * path)
+file_fd_record * insert_into_link(process_record * record, unsigned int fd, char * path)
 {
 	file_fd_record * fd_record = NULL;
 
@@ -248,7 +317,62 @@ file_fd_record * insert_into_link(process_record * record, int fd, char * path)
 	return fd_record;
 }
 
-char * get_cache_by_fd(int fd)
+bool delete_from_record(process_record * record, unsigned int fd)
+{
+	bool b_hot = true;
+	bool suc = false;
+	file_fd_record * fd_record = NULL;
+
+	fd_record = find_record_in_hot_cache(record, fd);
+	if (NULL == fd_record)
+	{
+		//hot cache failed, go normally
+		b_hot = false;
+			
+		fd_record = find_record_in_link(record, fd);
+	}
+
+	if (NULL != fd_record)
+	{
+		//delete from link
+		if (fd_record == record->file_fd_head)
+		{
+			//head
+			record->file_fd_head = record->file_fd_head->next;
+			record->file_fd_head->prev = NULL;
+		}
+		else
+		{
+			//normal
+			fd_record->prev->next = fd_record->next;
+			fd_next->prev = fd_record->prev;
+		}
+
+		//delete from hot cache
+
+		if (b_hot)
+		{
+			record->hot_count--;
+		}
+
+		record->fd_count--;
+		if (0 == record->fd_count)
+		{
+			record->file_fd_head = NULL;
+		}
+
+		//finally, release memory
+		kfree(fd_record);
+	}
+	else
+	{
+		PWARN("delete fd record failed, process: %d, fd: %d\n", current->pid, fd);
+	}
+
+	return suc;
+}
+
+char * get_cache_by_fd(unsigned int fd)
 {
 	char * path = NULL;
 	pid_t pid = current->pid;
@@ -304,7 +428,7 @@ char * get_cache_by_fd(int fd)
 	return path;
 }
 
-void insert_into_cache(int fd, char * path)
+void insert_into_cache(unsigned int fd, char * path)
 {
 	process_record * record = NULL;
 	
@@ -335,4 +459,32 @@ void insert_into_cache(int fd, char * path)
 	}
 
 	unlock_process_record();
+}
+
+bool delete_cache_by_fd(unsigned int fd)
+{
+	bool suc = false;
+	process_record * record = NULL;
+
+	lock_process_record();
+
+	record = get_record_by_pid(current->pid);
+	if (NULL != record)
+	{
+		down_write(&record->file_fd_sem);
+
+		suc = delete_from_record(record, fd);
+
+		up_write(&record->file_fd_sem);
+
+		PVERBOSE("pid #%d[fd #[%d] delete result: %b\n", current->pid, fd, suc);
+	}
+	else
+	{
+		PWARN("pid #%d process record not exists\n", current->pid);
+	}
+
+	unlock_process_record();
+
+	return suc;
 }

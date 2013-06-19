@@ -7,8 +7,10 @@ void fd_cache_initize(process_record * record);
 
 void fd_cache_cleanup(process_record * record);
 
-char * get_cache_by_fd(int fd);
+char * get_cache_by_fd(unsigned int fd);
 
-void insert_into_cache(int fd, char * path);
+bool delete_cache_by_fd(unsigned int fd);
+
+void insert_into_cache(unsigned int fd, char * path);
 
 #endif

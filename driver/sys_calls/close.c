@@ -43,6 +43,12 @@ long fake_sys_close(unsigned int fd)
 		end_log_system_call(result);
 	}
 
+	if (0 == result)
+	{
+		//close success
+		delete_cache_by_fd(fd);
+	}
+
 	trace_dog_leave(api_sys_close);
 	
 	return result;

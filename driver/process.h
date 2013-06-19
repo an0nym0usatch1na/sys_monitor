@@ -15,7 +15,7 @@ typedef struct _file_fd_record
 {
 	struct _file_fd_record * prev;
 	struct _file_fd_record * next;
-	int fd;
+	unsigned int fd;
 	char * filename;
 } file_fd_record;
 
