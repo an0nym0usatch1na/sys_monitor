@@ -15,7 +15,7 @@
 
 #include "process.h"
 
-#define SYSMON_DEBUG
+#define SYSMON_VERBOSE
 #include "./../share/debug.h"
 
 //main cache
@@ -29,6 +29,8 @@ struct rw_semaphore proc_sem;
 void fd_cache_initize(process_record * record);
 
 void fd_cache_cleanup(process_record * record);
+
+void run_fd_testcase(void);
 
 int process_monitor_init(void) 
 {
@@ -258,7 +260,7 @@ char * get_current_process_path(void)
 				{
 					strcpy(path, ptr);
 
-					PVERBOSE("get current process path \"%s\%\n", ptr);
+					PVERBOSE("get current process path \"%s\"\n", ptr);
 				}
 				else
 				{
@@ -372,9 +374,11 @@ void notify_enter(void)
 
 	if (-1 != id)
 	{
-		down_write(&proc_sem);
+		down_read(&proc_sem);
 
 		record = process_cache[id];
+
+		up_read(&proc_sem);
 
 		if (NULL != record) 
 		{
@@ -414,13 +418,19 @@ void notify_enter(void)
 			record = build_process_record(NULL);
 			if (NULL != record)
 			{
+				down_write(&proc_sem);
+
 				process_cache[id] = record;
 
+				up_write(&proc_sem);
+
 				PDEBUG("process cache #%d updated from null to \"%s\"\n", id, record->filename);
+
+#ifdef _RUN_TESTCASE
+				run_fd_testcase();
+#endif
 			}
 		}
-
-		up_write(&proc_sem);
 	}
 }
 

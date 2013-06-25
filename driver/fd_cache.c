@@ -18,30 +18,16 @@
 
 #include "fd_cache.h"
 
-#define SYSMON_DEBUG
+#define SYSMON_VERBOSE
 #include "./../share/debug.h"
 
-#define RUN_TESTCASE
-
-//initize an new fd cache area of process record, called when an new process go into our monitor
-void fd_cache_initize(process_record * record)
+//testcase
+void run_fd_testcase(void)
 {
-#ifdef RUN_TESTCASE
 	int i = 0;
 	unsigned int fds[100] = { 0 };
-#endif
+	process_record * record = get_record_by_pid(current->pid);
 
-	init_rwsem(&record->file_fd_sem);
-    
-	record->fd_count = 0;
-	record->hot_count = 0;
-    record->file_fd_head = NULL;
-    
-	memset(record->hot_fd_cache, 0, sizeof(void *) * HOT_FD_CACHE_SIZE);
-
-	PDEBUG("process \"%s\" initized fd_cache, cache ready to use\n", record->filename);
-
-#ifdef RUN_TESTCASE
 	//prepare testcase
 	for (i = 0; i < 100; i++)
 	{
@@ -55,6 +41,10 @@ void fd_cache_initize(process_record * record)
 
 		get_random_bytes(&exchange, sizeof(int));
 		exchange = exchange % 100;
+		if (exchange < 0)
+		{
+			exchange = -1 * exchange;
+		}
 
 		t = fds[i];
 		fds[i] = fds[exchange];
@@ -80,9 +70,18 @@ void fd_cache_initize(process_record * record)
 	for (i = 0; i < 100; i++)
 	{
 		char * path = get_cache_by_fd((unsigned int)i);
+		if (NULL == path)
+		{
+			PERROR("testcase error, fd #%d does not exists\n", i);
+
+			continue;
+		}
+
 		if (i != (int)path[0])
 		{
 			PERROR("testcase error, fd #%d not match path #%d\n", i, (int)path[0]);
+
+			continue;
 		}
 
 		delete_cache_by_fd((unsigned int)i);
@@ -96,7 +95,20 @@ void fd_cache_initize(process_record * record)
 	}
 	
 	PDEBUG("testcase finish\n");
-#endif
+}
+
+//initize an new fd cache area of process record, called when an new process go into our monitor
+void fd_cache_initize(process_record * record)
+{
+	init_rwsem(&record->file_fd_sem);
+    
+	record->fd_count = 0;
+	record->hot_count = 0;
+    record->file_fd_head = NULL;
+    
+	memset(record->hot_fd_cache, 0, sizeof(void *) * HOT_FD_CACHE_SIZE);
+
+	PDEBUG("process \"%s\" initized fd_cache, cache ready to use\n", record->filename);
 }
 
 //cleanup fd cache area and resource, called when process gone away
@@ -121,11 +133,12 @@ void fd_cache_cleanup(process_record * record)
 }
 
 //find record in current process hot cache, may fail, use binary search, always called before find in link to speed up
-file_fd_record * find_record_in_hot_cache(process_record * record, unsigned int fd)
+file_fd_record * find_record_in_hot_cache(process_record * record, unsigned int fd, int * index)
 {
 	int l = 0;
 	int r = record->hot_count - 1;
-	int	index = -1;
+	
+	*index = -1;
 
 	while (l <= r)
 	{
@@ -142,15 +155,15 @@ file_fd_record * find_record_in_hot_cache(process_record * record, unsigned int 
 		}
 		else	//t_fd == fd
 		{
-			index = m;
+			*index = m;
 
 			break;
 		}
 	}
 
-	if (-1 != index)
+	if (-1 != *index)
 	{
-		return record->hot_fd_cache[index];
+		return record->hot_fd_cache[*index];
 	}
 	else
 	{
@@ -223,7 +236,7 @@ file_fd_record * allocate_file_fd_record(unsigned int fd, char * path)
 int get_insert_index(process_record * record, unsigned int fd)
 {
 	int fit_index = 0;
-	unsigned int prev_fd = -1;
+	unsigned int prev_fd = -1;	/!!!!
 	unsigned int next_fd = 0xFFFFFFFF;
 	int l = 0;
 	int r = record->hot_count - 1;
@@ -274,6 +287,8 @@ int get_insert_index(process_record * record, unsigned int fd)
 	}
 
 	PVERBOSE("found fd #%d insert index at %d, prev fd: %d, next fd: %d\n", fd, fit_index, prev_fd, next_fd);
+
+	return fit_index;
 }
 
 void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
@@ -316,7 +331,7 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 		//oldest in on the left, array move left
 		for (i = oldest_index; i < fit_index; i++)
 		{
-			record->hot_fd_cahce[i] = record->hot_fd_cache[i + 1];
+			record->hot_fd_cache[i] = record->hot_fd_cache[i + 1];
 			record->hot_fd_cache[i]->hot_index--;
 		}
 	}
@@ -339,10 +354,18 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 	fd_record->hot_index = fit_index;
 
 	//link hot cache up
-	fd_record->time_prev = record->hot_fd_head->time_prev;
-	fd_record->next_time = record->hot_fd_head;
-	record->hot_fd_head->time_prev = fd_record;
-	fd_record->time_prev->time_next = fd_record;
+	if (NULL == record->hot_fd_head)
+	{
+		fd_record->time_prev = fd_record;
+		fd_record->time_next = fd_record;
+	}
+	else
+	{
+		fd_record->time_prev = record->hot_fd_head->time_prev;
+		fd_record->time_next = record->hot_fd_head;
+		record->hot_fd_head->time_prev = fd_record;
+		fd_record->time_prev->time_next = fd_record;
+	}
 
 	record->hot_fd_head = fd_record;
 
@@ -364,7 +387,12 @@ file_fd_record * insert_into_link(process_record * record, unsigned int fd, char
 		//insert to head
 		fd_record->prev = NULL;
 		fd_record->next = record->file_fd_head;
-		record->file_fd_head->prev = fd_record;
+		
+		if (NULL != record->file_fd_head)
+		{
+			record->file_fd_head->prev = fd_record;
+		}
+
 		record->file_fd_head = fd_record;
 	}
 
@@ -378,7 +406,7 @@ bool delete_from_record(process_record * record, unsigned int fd)
 	int del_index = 0;
 	file_fd_record * fd_record = NULL;
 
-	fd_record = find_record_in_hot_cache(record, fd, del_index);
+	fd_record = find_record_in_hot_cache(record, fd, &del_index);
 	if (NULL == fd_record)
 	{
 		//hot cache failed, go normally
@@ -400,7 +428,7 @@ bool delete_from_record(process_record * record, unsigned int fd)
 		{
 			//normal
 			fd_record->prev->next = fd_record->next;
-			fd_next->prev = fd_record->prev;
+			fd_record->next->prev = fd_record->prev;
 		}
 
 		//delete from hot cache
@@ -408,7 +436,7 @@ bool delete_from_record(process_record * record, unsigned int fd)
 		{
 			//delete from cache
 			int i = 0;
-			for (i = fd_record; i < record->hot_count - 1; i++)
+			for (i = del_index; i < record->hot_count - 1; i++)
 			{
 				record->hot_fd_cache[i] = record->hot_fd_cache[i + 1];
 				record->hot_fd_cache[i]->hot_index--;
@@ -448,15 +476,19 @@ char * get_cache_by_fd(unsigned int fd)
 	lock_process_record();
 
 	record = get_record_by_pid(pid);
+	
+	unlock_process_record();
+
 	if (NULL != record)
 	{
+		int index = 0;
 		file_fd_record * fd_record = NULL;
 	
 		//lock file fd also
-		down_write(&record->file_fd_sem);
+		down_read(&record->file_fd_sem);
 
 		//first, find fd from hot cache
-		fd_record = find_record_in_hot_cache(record, fd);
+		fd_record = find_record_in_hot_cache(record, fd, &index);
 		if (NULL == fd_record)
 		{
 			PVERBOSE("pid #%d hot cache not found fd #%d, now find normally\n", pid, fd);
@@ -482,14 +514,12 @@ char * get_cache_by_fd(unsigned int fd)
 			PWARN("pid #%d[fd #%d] does not exists\n", pid, fd);
 		}
 
-		up_write(&record->file_fd_sem);
+		up_read(&record->file_fd_sem);
 	}
 	else
 	{
 		PWARN("pid #%d process record not exists\n", pid);
 	}
-
-	unlock_process_record();
 
 	return path;
 }
@@ -502,6 +532,9 @@ void insert_into_cache(unsigned int fd, char * path)
 	lock_process_record();
 
 	record = get_record_by_pid(current->pid);
+
+	unlock_process_record();
+
 	if (NULL != record)
 	{
 		file_fd_record * fd_record = NULL;
@@ -523,8 +556,6 @@ void insert_into_cache(unsigned int fd, char * path)
 	{
 		PWARN("pid #%d process record not exists\n", current->pid);
 	}
-
-	unlock_process_record();
 }
 
 bool delete_cache_by_fd(unsigned int fd)
@@ -535,6 +566,9 @@ bool delete_cache_by_fd(unsigned int fd)
 	lock_process_record();
 
 	record = get_record_by_pid(current->pid);
+	
+	unlock_process_record();
+
 	if (NULL != record)
 	{
 		down_write(&record->file_fd_sem);
@@ -549,8 +583,6 @@ bool delete_cache_by_fd(unsigned int fd)
 	{
 		PWARN("pid #%d process record not exists\n", current->pid);
 	}
-
-	unlock_process_record();
 
 	return suc;
 }

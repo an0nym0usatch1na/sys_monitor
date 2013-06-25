@@ -48,7 +48,7 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 	if (-1 != result)
 	{
 		//sys api success
-		insert_into_cache(result, filename);	
+		insert_into_cache((unsigned int)result, (char *)filename);	
 	}
 
 	trace_dog_leave(api_sys_open);
@@ -89,7 +89,7 @@ long fake_sys_creat(const char __user * pathname, int mode)
 
 	if (-1 != result)
 	{
-		insert_into_cache(result, pathname);
+		insert_into_cache((unsigned int)result, (char *)pathname);
 	}
 
 	trace_dog_leave(api_sys_create);

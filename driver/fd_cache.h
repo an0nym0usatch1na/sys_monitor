@@ -13,4 +13,6 @@ bool delete_cache_by_fd(unsigned int fd);
 
 void insert_into_cache(unsigned int fd, char * path);
 
+void run_fd_testcase(void);
+
 #endif

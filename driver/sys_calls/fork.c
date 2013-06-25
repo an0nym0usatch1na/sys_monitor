@@ -69,10 +69,10 @@ long fake_sys_clone(unsigned long clone_flags,
 	{
 		add_unsigned_int_param("clone_flags", clone_flags);
 		add_unsigned_int_param("newsp", newsp);
-		add_pointer_param("parent_tidptr", parent_tidptr);
+		add_pointer_param("parent_tidptr", (unsigned char *)parent_tidptr);
 		add_unsigned_int_param("tls_val", tls_val);
-		add_pointer_param("child_tidptr", child_tidptr);
-		add_pointer_param("regs", regs);
+		add_pointer_param("child_tidptr", (unsigned char *)child_tidptr);
+		add_pointer_param("regs", (unsigned char *)regs);
 	}
 	
 	result = original_sys_clone(clone_flags, newsp, parent_tidptr, tls_val, child_tidptr, regs);
@@ -211,8 +211,8 @@ void fork_operation_init(unsigned long ** sys_call_table)
 		{
 			if ((0xff000000 & inst_b) == 0xea000000) 	//b xxx
 			{
-				original_sys_fork_wrapper = original_sys_fork;
-				original_sys_fork = ((unsigned int)original_sys_fork_wrapper + (inst_b & 0x00ffffff) * 4 + 12);
+				original_sys_fork_wrapper = (lpfn_original_sys_fork_wrapper)original_sys_fork;
+				original_sys_fork = (lpfn_original_sys_fork)((unsigned int)original_sys_fork_wrapper + (inst_b & 0x00ffffff) * 4 + 12);
 				b_sys_fork_wrapper = true;
 			}
 		}

@@ -34,7 +34,7 @@ long fake_sys_write(unsigned int fd, const char __user * buf, size_t count)
 	if (log_ok)
 	{
 		add_unsigned_int_param("fd", fd);
-		add_pointer_param("buf", buf);
+		add_pointer_param("buf", (unsigned char *)buf);
 		add_unsigned_int_param("count", count);
 	}
 	
