@@ -229,6 +229,8 @@ file_fd_record * allocate_file_fd_record(unsigned int fd, char * path)
 			}
 	        
 			fd_record->filename[len] = '\0';
+
+			PVERBOSE("allocated file fd record 0x%08x\n", fd_record);
 		}
 		else
 		{
@@ -395,8 +397,9 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 	{
 		fd_record->time_prev = record->hot_fd_head->time_prev;
 		fd_record->time_next = record->hot_fd_head;
+
+		record->hot_fd_head->time_prev->time_next = fd_record;
 		record->hot_fd_head->time_prev = fd_record;
-		fd_record->time_prev->time_next = fd_record;
 	}
 
 	record->hot_fd_head = fd_record;
@@ -426,6 +429,8 @@ file_fd_record * insert_into_link(process_record * record, unsigned int fd, char
 		{
 			record->file_fd_head->prev = fd_record;
 		}
+
+		PVERBOSE("file fd head update to 0x%08x from 0x%08x\n", fd_record, record->file_fd_head);
 
 		record->file_fd_head = fd_record;
 		record->fd_count++;
@@ -470,6 +475,8 @@ bool delete_from_record(process_record * record, unsigned int fd)
 			record->file_fd_head = record->file_fd_head->next;
 			if (NULL != record->file_fd_head)
 			{
+				PVERBOSE("opps, 0x%08x, 0x%08x\n", record, record->file_fd_head);
+
 				record->file_fd_head->prev = NULL;
 			}
 		}
