@@ -125,7 +125,7 @@ long fake_sys_vfork(struct pt_regs * regs)
 	
 	if (log_ok)
 	{
-		add_pointer_param("regs", regs);
+		add_pointer_param("regs", (unsigned char *)regs);
 	}
 	
 	result = original_sys_vfork(regs);
@@ -178,7 +178,7 @@ long fake_sys_fork(struct pt_regs * regs)
 	
 	if (log_ok)
 	{
-		add_pointer_param("regs", regs);
+		add_pointer_param("regs", (unsigned char *)regs);
 	}
 
 	result = original_sys_fork(regs);
@@ -226,8 +226,8 @@ void fork_operation_init(unsigned long ** sys_call_table)
 		{
 			if ((0xff000000 & inst_b) == 0xea000000) 	//b xxx
 			{
-				original_sys_vfork_wrapper = original_sys_vfork;
-				original_sys_vfork = ((unsigned int)original_sys_vfork_wrapper + (inst_b & 0x00ffffff) * 4 + 12);
+				original_sys_vfork_wrapper = (lpfn_original_sys_vfork_wrapper)original_sys_vfork;
+				original_sys_vfork = (lpfn_original_sys_vfork)((unsigned int)original_sys_vfork_wrapper + (inst_b & 0x00ffffff) * 4 + 12);
 				b_sys_vfork_wrapper = true;
 			}
 		}
@@ -242,8 +242,8 @@ void fork_operation_init(unsigned long ** sys_call_table)
 		{
 			if ((0xff000000 & inst_c) == 0xea000000) 	//b xxx
 			{
-				original_sys_clone_wrapper = original_sys_clone;
-				original_sys_clone = ((unsigned int)original_sys_clone_wrapper + (inst_c & 0x00ffffff) * 4 + 16);
+				original_sys_clone_wrapper = (lpfn_original_sys_clone_wrapper)original_sys_clone;
+				original_sys_clone = (lpfn_original_sys_clone)((unsigned int)original_sys_clone_wrapper + (inst_c & 0x00ffffff) * 4 + 16);
 				b_sys_clone_wrapper = true;
 			}
 		}
@@ -329,7 +329,7 @@ void fork_operation_cleanup(unsigned long ** sys_call_table)
 		{
 			if (NULL != original_sys_fork_wrapper)
 			{
-				sys_call_table[__NR_fork] = original_sys_fork_wrapper;
+				sys_call_table[__NR_fork] = (unsigned long *)original_sys_fork_wrapper;
 
 				PDEBUG("restore sys_fork wrapper, original: 0x%08x\n", original_sys_fork_wrapper);
 			}
@@ -338,7 +338,7 @@ void fork_operation_cleanup(unsigned long ** sys_call_table)
 		{
 			if (NULL != original_sys_fork)
 			{
-				sys_call_table[__NR_fork] = original_sys_fork;
+				sys_call_table[__NR_fork] = (unsigned long *)original_sys_fork;
 		
 				PDEBUG("restore sys_fork, original: 0x%08x\n", original_sys_fork);
 			}
@@ -348,7 +348,7 @@ void fork_operation_cleanup(unsigned long ** sys_call_table)
 		{
 			if (NULL != original_sys_vfork_wrapper)
 			{
-				sys_call_table[__NR_vfork] = original_sys_vfork_wrapper;
+				sys_call_table[__NR_vfork] = (unsigned long *)original_sys_vfork_wrapper;
 
 				PDEBUG("restore sys_vfork wrapper, original: 0x%08x\n", original_sys_vfork_wrapper);
 			}
@@ -357,7 +357,7 @@ void fork_operation_cleanup(unsigned long ** sys_call_table)
 		{
 			if (NULL != original_sys_vfork)
 			{
-				sys_call_table[__NR_vfork] = original_sys_vfork;
+				sys_call_table[__NR_vfork] = (unsigned long *)original_sys_vfork;
 		
 				PDEBUG("restore sys_vfork, original: 0x%08x\n", original_sys_vfork);
 			}
@@ -367,7 +367,7 @@ void fork_operation_cleanup(unsigned long ** sys_call_table)
 		{
 			if (NULL != original_sys_clone_wrapper)
 			{
-				sys_call_table[__NR_clone] = original_sys_clone_wrapper;
+				sys_call_table[__NR_clone] = (unsigned long *)original_sys_clone_wrapper;
 
 				PDEBUG("restore sys_clone wrapper, original: 0x%08x\n", original_sys_clone_wrapper);
 			}
@@ -376,7 +376,7 @@ void fork_operation_cleanup(unsigned long ** sys_call_table)
 		{
 			if (NULL != original_sys_clone)
 			{
-				sys_call_table[__NR_clone] = original_sys_clone;
+				sys_call_table[__NR_clone] = (unsigned long *)original_sys_clone;
 		
 				PDEBUG("restore sys_clone, original: 0x%08x\n", original_sys_clone);
 			}
