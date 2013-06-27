@@ -25,11 +25,13 @@ long fake_sys_read(unsigned int fd, char __user * buf, size_t count)
 	bool log_ok = false;
 	long result = 0;
 
+	PVERBOSE("sys_read(fd: %d, buf: 0x%08x, count: %d) invoked\n", fd, buf, count);
+
 	notify_enter();
 
 	trace_dog_enter(api_sys_read);
 
-	log_ok = begin_log_system_call(op_read_file, api_sys_read, get_cache_by_fd(fd), 3);
+	log_ok = begin_log_system_call2(op_read_file, api_sys_read, fd, 3);
 	
 	if (log_ok)
 	{

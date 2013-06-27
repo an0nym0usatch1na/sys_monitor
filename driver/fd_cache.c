@@ -325,6 +325,8 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
     	oldest_record->time_prev->time_next = oldest_record->time_next;
 		oldest_record->time_next->time_prev = oldest_record->time_prev;
 
+		record->hot_count--;
+
 		PVERBOSE("kill oldest cache(path: \"%s\", fd: %d, id: %d)", oldest_record->filename, oldest_record->fd, oldest_record->hot_index);
 	}
 
@@ -342,10 +344,10 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 			record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
 			record->hot_fd_cache[i]->hot_index++;
 
-			if (record->hot_fd_cache[i]->hot_index != i)
-			{
-				PERROR("what a fuck, oldest index: %d, fit index: %d, i: %d\n", oldest_index, fit_index, i);
-			}
+			//if (record->hot_fd_cache[i]->hot_index != i)
+			//{
+			//	PERROR("what a fuck, oldest index: %d, fit index: %d, i: %d\n", oldest_index, fit_index, i);
+			//}
 		}
 	}
 	else if (oldest_index < fit_index)
@@ -356,10 +358,10 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 			record->hot_fd_cache[i] = record->hot_fd_cache[i + 1];
 			record->hot_fd_cache[i]->hot_index--;
 
-			if (record->hot_fd_cache[i]->hot_index != i)
-			{
-				PERROR("what a fuck, oldest index: %d, fit index: %d, i: %d\n", oldest_index, fit_index, i);
-			}
+			//if (record->hot_fd_cache[i]->hot_index != i)
+			//{
+			//	PERROR("what a fuck, oldest index: %d, fit index: %d, i: %d\n", oldest_index, fit_index, i);
+			//}
 		}
 
 		fit_index--;
@@ -372,10 +374,10 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 			record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
 			record->hot_fd_cache[i]->hot_index++;
 
-			if (record->hot_fd_cache[i]->hot_index != i)
-			{
-				PERROR("what a fuck, oldest index: %d, fit index: %d, i: %d\n", oldest_index, fit_index, i);
-			}
+			//if (record->hot_fd_cache[i]->hot_index != i)
+			//{
+			//	PERROR("what a fuck, oldest index: %d, fit index: %d, i: %d\n", oldest_index, fit_index, i);
+			//}
 		}
 	}
 	else	// (oldest_index == fit_index)
@@ -404,11 +406,8 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 
 	record->hot_fd_head = fd_record;
 
-	if (-1 == oldest_index)
-	{
-		//add reference
-		record->hot_count++;
-	}
+	//add reference
+	record->hot_count++;
 }
 
 //allocate and insert into current process record`s fd record link
@@ -512,6 +511,10 @@ bool delete_from_record(process_record * record, unsigned int fd)
 			fd_record->time_next->time_prev = fd_record->time_prev;
 
 			record->hot_count--;
+			if (0 == record->hot_count)
+			{
+				record->hot_fd_head = NULL;
+			}
 		}
 
 		record->fd_count--;
@@ -522,6 +525,8 @@ bool delete_from_record(process_record * record, unsigned int fd)
 
 		//finally, release memory
 		kfree(fd_record);
+
+		PVERBOSE("delete fd_record 0x%08x here\n", fd_record);
 
 		suc = true;
 	}

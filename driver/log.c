@@ -12,6 +12,8 @@
 #include "sys_monitor.h"
 #include "log.h"
 #include "interface.h"
+#include "process.h"
+#include "fd_cache.h"
 
 #define SYSMON_DEBUG
 #include "./../share/debug.h"
@@ -252,7 +254,33 @@ log_item * get_current_cache(bool get_new)
 	return item;
 }
 
-char * copy_string_from_param(const __user char * path)
+char * copy_string(char * path)
+{
+	int len = 0;
+	char * holder = NULL;
+
+	if (NULL != path)
+	{
+		len = strlen(path);
+	}
+
+	holder = (char *)kmalloc(len + 1, GFP_KERNEL);
+	if (NULL != holder)
+	{
+		if (NULL != path)
+		{
+			strcpy(holder, path);
+		}
+		else
+		{
+			holder[0] = '\0';
+		}
+	}
+
+	return holder;
+}
+
+char * copy_string_from_user(const __user char * path)
 {
 	char * holder = kmalloc(STRING_MAX_SIZE, GFP_KERNEL);
 	
@@ -267,27 +295,21 @@ char * copy_string_from_param(const __user char * path)
 	return holder;
 	
 cleanup:
-	PERROR("error while invoke strncpy_from_user\n");
+	PERROR("error while invoke strncpy_from_user, holder: 0x%08x, path: 0x%08x(\"%s\")\n", holder, path, path);
 
 	kfree(holder);
 	
 	return NULL;
 }
 
-bool begin_log_system_call(operation_name oper, api_name api, const __user char * path, int param_count)
+bool begin_log_system_call_internal(operation_name oper, api_name api, char * path, int param_count)
 {
-	char * path_safe = NULL;
 	log_item * item = NULL;
 
 	if (is_our_process()) 
 	{
 		//operation from our ring3 reader process
 		return false;
-	}
-
-	if (NULL != path) 
-	{
-		path_safe = copy_string_from_param(path);
 	}
 
 	item = get_current_cache(true);
@@ -304,7 +326,7 @@ bool begin_log_system_call(operation_name oper, api_name api, const __user char 
 		item->header.tid = get_thread_id();
 		item->header.operation = oper;
 		item->header.api = api;
-		item->path = path_safe;
+		item->path = path;
 		item->param.param_count = param_count;
 		item->param.param_strings = NULL;
 		item->param.current_param = 0;
@@ -336,6 +358,29 @@ bool begin_log_system_call(operation_name oper, api_name api, const __user char 
 		
 		return false;
 	}
+}
+
+bool begin_log_system_call2(operation_name oper, api_name api, unsigned int fd, int param_count)
+{
+	char * path_safe = NULL;
+
+	path_safe = copy_string(get_cache_by_fd(fd));
+	
+	PVERBOSE("get path \"%s\" fOr fd #%d from fd cache\n", path_safe, fd);
+
+	return begin_log_system_call_internal(oper, api, path_safe, param_count);
+}
+
+bool begin_log_system_call(operation_name oper, api_name api, const __user char * path, int param_count)
+{
+	char * path_safe = NULL;
+	
+	if (NULL != path)
+	{
+		path_safe = copy_string_from_user(path);
+	}
+
+	return begin_log_system_call_internal(oper, api, path_safe, param_count);
 }
 
 //it will add an void param string to log item
@@ -434,7 +479,7 @@ void add_string_param(char *name, const __user char * string_param)
 	if (NULL != item)
 	{
 		//first, get string from user space
-		char * str = copy_string_from_param(string_param);
+		char * str = copy_string_from_user(string_param);
 		if (NULL == str)
 		{
 			//copy failed, so we assume it as null

@@ -15,6 +15,8 @@ int get_proc_id(void);
 
 void log_cleanup(void);
 
+bool begin_log_system_call2(operation_name oper, api_name api, unsigned int fd, int param_count);
+
 bool begin_log_system_call(operation_name oper, api_name api, const __user char * path, int param_count);
 
 void add_void_param(void);

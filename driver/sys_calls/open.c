@@ -25,6 +25,8 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 	bool log_ok = false;
 	long result = 0;
 
+	PVERBOSE("sys_open(filename: %s, flags: %d, mode: %d) invoked\n", filename, flags, mode);
+
 	notify_enter();
 
 	trace_dog_enter(api_sys_open);
@@ -67,6 +69,8 @@ long fake_sys_creat(const char __user * pathname, int mode)
 {
 	bool log_ok = false;
 	long result = 0;
+
+	PVERBOSE("sys_creat(pathname: %s, mode: %d) invoked\n", pathname, mode);
 
 	notify_enter();
 

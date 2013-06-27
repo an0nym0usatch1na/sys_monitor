@@ -15,7 +15,7 @@
 
 #include "process.h"
 
-#define SYSMON_VERBOSE
+#define SYSMON_DEBUG
 #include "./../share/debug.h"
 
 //main cache
