@@ -395,7 +395,7 @@ void notify_enter(void)
 					//clear the flag
 					record->before_execve = false;
 
-					PDEBUG("process cache #%d updated to \"%s\" by before_execve flags\n", id, record->filename);
+					PDEBUG("process cache #%d filename updated to \"%s\" by before_execve flags\n", id, record->filename);
 				}
 				else
 				{

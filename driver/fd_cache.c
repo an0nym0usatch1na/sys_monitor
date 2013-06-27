@@ -18,7 +18,7 @@
 
 #include "fd_cache.h"
 
-#define SYSMON_VERBOSE
+#define SYSMON_WARN
 #include "./../share/debug.h"
 
 //testcase
@@ -253,8 +253,8 @@ file_fd_record * allocate_file_fd_record(unsigned int fd, char * path)
 int get_insert_index(process_record * record, unsigned int fd)
 {
 	int fit_index = 0;
-	int prev_fd = -1;
-	int next_fd = 0x7FFFFFFF;
+	unsigned int prev_fd = 0;
+	unsigned int next_fd = 0;
 	int l = 0;
 	int r = record->hot_count - 1;
 
@@ -263,8 +263,8 @@ int get_insert_index(process_record * record, unsigned int fd)
 		int m = (l + r) / 2;
 		unsigned int t_fd = -1;
 		
-		prev_fd = -1;
-		next_fd = 0x7FFFFFFF;
+		prev_fd = 0;
+		next_fd = 0;
 
 		//assert last
 		fit_index = record->hot_count - 1;
@@ -272,21 +272,21 @@ int get_insert_index(process_record * record, unsigned int fd)
 		t_fd = record->hot_fd_cache[m]->fd;
 		if (0 != m)
 		{
-			prev_fd = (int)record->hot_fd_cache[m - 1]->fd;
+			prev_fd = record->hot_fd_cache[m - 1]->fd;
 		}
 		if (record->hot_count - 1 != m)
 		{
-			next_fd = (int)record->hot_fd_cache[m + 1]->fd;
+			next_fd = record->hot_fd_cache[m + 1]->fd;
 		}
 
-		if (prev_fd <= (int)fd && t_fd >= fd)
+		if ((0 == m || prev_fd <= fd) && t_fd >= fd)
 		{
 			fit_index = m;
 
 			break;
 		}
 		
-		if (t_fd <= fd && next_fd >= (int)fd)
+		if (t_fd <= fd && (record->hot_count -1 == m || next_fd >= fd))
 		{
 			fit_index = m + 1;
 			
@@ -303,7 +303,7 @@ int get_insert_index(process_record * record, unsigned int fd)
 		}
 	}
 
-	PVERBOSE("found fd #%d insert index at %d, prev fd: %d, next fd: %d\n", fd, fit_index, prev_fd, next_fd);
+	PVERBOSE("found fd #%u insert index at %d, prev fd: %u, next fd: %u\n", fd, fit_index, prev_fd, next_fd);
 
 	return fit_index;
 }
@@ -317,23 +317,45 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 	//if full, then we need to make an room
 	if (record->hot_count == HOT_FD_CACHE_SIZE)
 	{
+		file_fd_record * oldest_record = NULL;
+
+		assert(NULL != record->hot_fd_head);
+
 		//hot cache link`s last element must be oldest because we always insert young element to head
-		file_fd_record * oldest_record = record->hot_fd_head->time_prev;
+		oldest_record = record->hot_fd_head->time_prev;
 		oldest_index = oldest_record->hot_index;
+
+		assert(oldest_index >= 0);
 
 		//break up hot cache link
     	oldest_record->time_prev->time_next = oldest_record->time_next;
 		oldest_record->time_next->time_prev = oldest_record->time_prev;
 
-		record->hot_count--;
-
-		PVERBOSE("kill oldest cache(path: \"%s\", fd: %d, id: %d)", oldest_record->filename, oldest_record->fd, oldest_record->hot_index);
+		PVERBOSE("kill oldest cache(path: \"%s\", fd: %u, id: %d)", oldest_record->filename, oldest_record->fd, oldest_record->hot_index);
 	}
 
 	//find the place to insert
 	fit_index = get_insert_index(record, fd_record->fd);
 
-	PVERBOSE("find fit index: %d, oldest_index: %d\n", fit_index, oldest_index);
+	int a = fit_index;
+	int b = oldest_index;
+	unsigned int c = 0x7FFFFFFF;
+	unsigned int d = 0x7FFFFFFF;
+
+	if (fit_index >= 0 && fit_index <= 15)
+	{
+		if (NULL != record->hot_fd_cache[fit_index])
+		{
+			d = record->hot_fd_cache[fit_index]->fd;
+		}
+	}
+
+	if (-1 != oldest_index)
+	{
+		c = record->hot_fd_cache[oldest_index]->fd;
+	}
+
+	PVERBOSE("find fit index: %u, oldest_index: %u\n", fit_index, oldest_index);
 		
 	//move
 	if (-1 == oldest_index)
@@ -341,13 +363,10 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 		//no oldest index need to skip
 		for (i = record->hot_count; i > fit_index; i--)
 		{
-			record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
-			record->hot_fd_cache[i]->hot_index++;
+			assert((i - 1) == record->hot_fd_cache[i - 1]->hot_index);
 
-			//if (record->hot_fd_cache[i]->hot_index != i)
-			//{
-			//	PERROR("what a fuck, oldest index: %d, fit index: %d, i: %d\n", oldest_index, fit_index, i);
-			//}
+			record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
+			record->hot_fd_cache[i]->hot_index = i;
 		}
 	}
 	else if (oldest_index < fit_index)
@@ -355,13 +374,10 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 		//fit index will be remain, insert into its left, so fit_index--
 		for (i = oldest_index; i < fit_index - 1; i++)
 		{
-			record->hot_fd_cache[i] = record->hot_fd_cache[i + 1];
-			record->hot_fd_cache[i]->hot_index--;
+			assert((i + 1) == record->hot_fd_cache[i + 1]->hot_index);
 
-			//if (record->hot_fd_cache[i]->hot_index != i)
-			//{
-			//	PERROR("what a fuck, oldest index: %d, fit index: %d, i: %d\n", oldest_index, fit_index, i);
-			//}
+			record->hot_fd_cache[i] = record->hot_fd_cache[i + 1];
+			record->hot_fd_cache[i]->hot_index = i;
 		}
 
 		fit_index--;
@@ -371,18 +387,15 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 		//fit index will go right 1 index, so its index will not remain, just use its index
 		for (i = oldest_index; i > fit_index; i--)
 		{
-			record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
-			record->hot_fd_cache[i]->hot_index++;
+			assert((i - 1) == record->hot_fd_cache[i - 1]->hot_index);
 
-			//if (record->hot_fd_cache[i]->hot_index != i)
-			//{
-			//	PERROR("what a fuck, oldest index: %d, fit index: %d, i: %d\n", oldest_index, fit_index, i);
-			//}
+			record->hot_fd_cache[i] = record->hot_fd_cache[i - 1];
+			record->hot_fd_cache[i]->hot_index = i;
 		}
 	}
 	else	// (oldest_index == fit_index)
 	{
-		//insert into oldest index`s left, perfect, noting need to do
+		//insert into oldest index`s left, perfect, nothing need to do
 	}
 
 	//settle, fit index means witch item`s left fit us
@@ -397,6 +410,9 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 	}
 	else
 	{
+		assert(record->hot_fd_head->time_prev->time_next == record->hot_fd_head);
+		assert(record->hot_fd_head->time_next->time_prev == record->hot_fd_head);
+		
 		fd_record->time_prev = record->hot_fd_head->time_prev;
 		fd_record->time_next = record->hot_fd_head;
 
@@ -405,9 +421,50 @@ void insert_into_hot_cache(process_record * record, file_fd_record * fd_record)
 	}
 
 	record->hot_fd_head = fd_record;
+    
+	assert(record->hot_fd_head->time_prev->time_next == record->hot_fd_head);
+	assert(record->hot_fd_head->time_next->time_prev == record->hot_fd_head);
 
 	//add reference
-	record->hot_count++;
+	if (-1 == oldest_index)
+	{
+		record->hot_count++;
+	}
+
+	//check
+	{
+		bool check_suc = true;
+		unsigned int prev = 0;
+		
+		for (i = 0; i < record->hot_count; i++)
+		{
+			if (i != record->hot_fd_cache[i]->hot_index)
+			{
+				check_suc = false;
+				
+				break;
+			}
+
+			if (prev > record->hot_fd_cache[i]->fd)
+			{
+				check_suc = false;
+
+				break;
+			}
+
+			prev = record->hot_fd_cache[i]->fd;
+		}
+
+		if (!check_suc)
+		{						                    
+			for (i = 0; i < record->hot_count; i++)
+			{
+				PERROR("*[%d]:(fd: %u, index: %d, path: \"%s\")\n", i, record->hot_fd_cache[i]->fd, record->hot_fd_cache[i]->hot_index, record->hot_fd_cache[i]->filename);
+			}
+			
+			PERROR("fd to insert: %u, fit index: %d, fit index`s fd: %u, oldest index: %d, oldest fd: %u\n", fd_record->fd, a, d, b, c);
+		}
+	}
 }
 
 //allocate and insert into current process record`s fd record link
@@ -502,11 +559,28 @@ bool delete_from_record(process_record * record, unsigned int fd)
 			//delete from cache
 			for (i = del_index; i < record->hot_count - 1; i++)
 			{
+				assert((i + 1) == record->hot_fd_cache[i + 1]->hot_index);
+				if (i + 1 != record->hot_fd_cache[i + 1]->hot_index)
+				{
+					int j = 0;
+					for (j = 0; j < record->hot_count; j++)
+					{
+						PERROR("[%d]:(fd: %d, index: %d, path: \"%s\")\n", j, record->hot_fd_cache[j]->fd, record->hot_fd_cache[j]->hot_index, record->hot_fd_cache[j]->filename);
+					}
+
+					PERROR("delete index: %d\n", del_index);
+				}
+
 				record->hot_fd_cache[i] = record->hot_fd_cache[i + 1];
-				record->hot_fd_cache[i]->hot_index--;
+				record->hot_fd_cache[i]->hot_index = i;
 			}
 
-			//delete from link
+			//delete from hot cache time link
+			if (fd_record == record->hot_fd_head)
+			{
+				record->hot_fd_head = record->hot_fd_head->time_next;
+			}
+			
 			fd_record->time_prev->time_next = fd_record->time_next;
 			fd_record->time_next->time_prev = fd_record->time_prev;
 
@@ -524,15 +598,13 @@ bool delete_from_record(process_record * record, unsigned int fd)
 		}
 
 		//finally, release memory
-		kfree(fd_record);
-
-		PVERBOSE("delete fd_record 0x%08x here\n", fd_record);
+		//kfree(fd_record);
 
 		suc = true;
 	}
 	else
 	{
-		PWARN("delete fd record failed, process: %d, fd: %d\n", current->pid, fd);
+		PDEBUG("delete fd record failed, process: %d, fd: %d\n", current->pid, fd);
 	}
 
 	PVERBOSE("delete finish, current fd count: %d, hot count: %d\n", record->fd_count, record->hot_count);
@@ -589,7 +661,7 @@ char * get_cache_by_fd(unsigned int fd)
 		}
 		else
 		{
-			PWARN("pid #%d[fd #%d] does not exists\n", pid, fd);
+			PDEBUG("pid #%d[fd #%d] does not exists\n", pid, fd);
 		}
 
 		up_read(&record->file_fd_sem);

@@ -47,12 +47,13 @@
 #define LOG_LEVEL_WARN      'W'
 #define LOG_LEVEL_DEBUG     'D'
 #define LOG_LEVEL_VERBOSE   'V'
+#define LOG_LEVEL_ASSERT	'A'
 
 #ifdef _DEBUG
 
 #	define assert(expr) \
 		if (unlikely(!(expr))) {                         \
-		log_event(LOG_LEVEL_ERROR, __FILE__, __LINE__,  \
+		log_event(LOG_LEVEL_ASSERT, __FILE__, __LINE__,  \
 		"Assertion failed: %s\n", #expr);     			\
 		}
 
