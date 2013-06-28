@@ -34,10 +34,6 @@ void run_fd_testcase(void);
 
 int process_monitor_init(void) 
 {
-#ifdef _DEBUG
-    int i = 0;
-#endif
-
     int size = sizeof(void *) * HASH_SLOT_SIZE;
 
     process_cache = (process_record **)kmalloc(size, GFP_KERNEL);
@@ -51,16 +47,17 @@ int process_monitor_init(void)
 
     memset(process_cache, '\0', size);
 
-#ifdef _DEBUG
-    for (i = 0; i < size ; i++)
-    {
-        if (0 != *((char *)process_cache + i))
-        {
-            //memset wrong?
-            PERROR("memset  error????\n");
-        }
-    }
-#endif
+	DEBUG_CODE(
+    	int i = 0;
+		for (i = 0; i < size ; i++)
+    	{
+    	    if (0 != *((char *)process_cache + i))
+    	    {
+    	        //memset wrong?
+    	        PERROR("memset  error????\n");
+    	    }
+		}
+    );
 
 	outstanding_header = NULL;
 	init_rwsem(&proc_sem);

@@ -51,15 +51,22 @@
 
 #ifdef _DEBUG
 
-#	define assert(expr) \
-		if (unlikely(!(expr))) {                         \
-		log_event(LOG_LEVEL_ASSERT, __FILE__, __LINE__,  \
-		"Assertion failed: %s\n", #expr);     			\
+#	define ASSERT(expr) \
+		if (unlikely(!(expr))) {                        \
+		log_event(LOG_LEVEL_ASSERT, __FILE__, __LINE__, \
+		"Assertion failed: %s\n !!!", #expr);     		\
+		}
+
+#	define DEBUG_CODE(expr) \
+		{					\
+			expr;			\
 		}
 
 #else
 
-#	define assert(expr)
+#	define ASSERT(expr)
+
+#	define DEBUG_CODE(expr)
 
 #endif
 

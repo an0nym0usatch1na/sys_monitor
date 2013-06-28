@@ -28,7 +28,7 @@ lpfn_original_sys_clone original_sys_clone = NULL;
 lpfn_original_sys_clone_wrapper original_sys_clone_wrapper = NULL;
 bool b_sys_clone_wrapper = false;
 
-long fake_sys_clone_wrapper(void) __attribute__((naked));
+void fake_sys_clone_wrapper(void) __attribute__((naked));
 long fake_sys_clone(unsigned long clone_flags, 
 					unsigned long newsp,
 					int __user *parent_tidptr, 
@@ -36,12 +36,13 @@ long fake_sys_clone(unsigned long clone_flags,
 					int __user *child_tidptr, 
 					struct pt_regs *regs);
 
-long fake_sys_clone_wrapper(void)
+void fake_sys_clone_wrapper(void)
 {
 	asm("nop");
 	asm("nop");
 	asm("nop");
-	
+	asm("nop");
+
 	/*
 		add ip, sp, #S_OFF;
 		str ip, [sp, #4];
@@ -98,14 +99,16 @@ lpfn_original_sys_vfork original_sys_vfork = NULL;
 lpfn_original_sys_vfork_wrapper original_sys_vfork_wrapper = NULL;
 bool b_sys_vfork_wrapper = false;
 
-long fake_sys_vfork_wrapper(void) __attribute__((naked));
+void fake_sys_vfork_wrapper(void) __attribute__((naked));
 long fake_sys_vfork(struct pt_regs * regs);
 
-long fake_sys_vfork_wrapper(void)
+void fake_sys_vfork_wrapper(void)
 {
 	asm("nop");
 	asm("nop");
-	
+	asm("nop");
+	asm("nop");
+
 	/*
 		add r0, sp, #8;
 		b fake_sys_vfork;
@@ -151,14 +154,16 @@ lpfn_original_sys_fork original_sys_fork = NULL;
 lpfn_original_sys_fork_wrapper original_sys_fork_wrapper = NULL;
 bool b_sys_fork_wrapper = false;
 
-long fake_sys_fork_wrapper(void) __attribute__((naked));
+void fake_sys_fork_wrapper(void) __attribute__((naked));
 long fake_sys_fork(struct pt_regs * regs);
 
-long fake_sys_fork_wrapper(void)
+void fake_sys_fork_wrapper(void)
 {
 	asm("nop");
 	asm("nop");
-	
+	asm("nop");
+	asm("nop");
+
 	/*
 		add r0, sp, #8;
 		b fake_sys_fork;

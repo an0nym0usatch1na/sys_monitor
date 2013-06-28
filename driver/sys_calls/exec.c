@@ -26,17 +26,19 @@ lpfn_original_sys_exec original_sys_exec = NULL;
 lpfn_original_sys_exec_wrapper original_sys_exec_wrapper = NULL;
 bool b_sys_exec_wrapper = false;
 
-long fake_sys_exec_wrapper(void) __attribute__((naked));
+void fake_sys_exec_wrapper(void) __attribute__((naked));
 long fake_sys_exec(const char __user * filenamei,
 				   const char __user * const __user * argv,
 				   const char __user * const __user * envp,
 				   struct pt_regs * regs);
 
-long fake_sys_exec_wrapper(void)
+void fake_sys_exec_wrapper(void)
 {
 	asm("nop");
 	asm("nop");
-	
+	asm("nop");
+	asm("nop");
+
 	/*
 		add r0, sp, #8;
 		b fake_sys_exec;
@@ -61,9 +63,9 @@ long fake_sys_exec(const char __user * filenamei,
 	if (log_ok)
 	{
 		add_string_param("filenamei", filenamei);
-		add_pointer_param("argv", argv);
-		add_pointer_param("envp", envp);
-		add_pointer_param("regs", regs);
+		add_pointer_param("argv", (unsigned char *)argv);
+		add_pointer_param("envp", (unsigned char *)envp);
+		add_pointer_param("regs", (unsigned char *)regs);
 
 		end_log_system_call(0);
 	}
@@ -92,8 +94,8 @@ void exec_operation_init(unsigned long ** sys_call_table)
 		{
 			if ((0xff000000 & inst_b) == 0xea000000) 	//b xxx
 			{
-				original_sys_exec_wrapper = original_sys_exec;
-				original_sys_exec = ((unsigned int)original_sys_exec_wrapper + (inst_b & 0x00ffffff) * 4 + 12);
+				original_sys_exec_wrapper = (lpfn_original_sys_exec_wrapper)original_sys_exec;
+				original_sys_exec = (lpfn_original_sys_exec)((unsigned int)original_sys_exec_wrapper + (inst_b & 0x00ffffff) * 4 + 12);
 				b_sys_exec_wrapper = true;
 			}
 		}
@@ -132,7 +134,7 @@ void exec_operation_cleanup(unsigned long ** sys_call_table)
 		{
 			if (NULL != original_sys_exec_wrapper)
 			{
-				sys_call_table[__NR_execve] = original_sys_exec_wrapper;
+				sys_call_table[__NR_execve] = (unsigned long *)original_sys_exec_wrapper;
 
 				PDEBUG("restore sys_execve wrapper, original: 0x%08x\n", original_sys_exec_wrapper);
 			}
@@ -141,7 +143,7 @@ void exec_operation_cleanup(unsigned long ** sys_call_table)
 		{
 			if (NULL != original_sys_exec)
 			{
-				sys_call_table[__NR_execve] = original_sys_exec;
+				sys_call_table[__NR_execve] = (unsigned long *)original_sys_exec;
 		
 				PDEBUG("restore sys_execve, original: 0x%08x\n", original_sys_exec);
 			}

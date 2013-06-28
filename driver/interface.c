@@ -212,7 +212,7 @@ ssize_t interface_read(struct file *filp, char __user *buf, size_t count, loff_t
 		int first_copy = 0;
 		int left = 0;
 
-		assert(first_size > 0);
+		ASSERT(first_size > 0);
 
 		PDEBUG("read cross boundary, left %d byte(s), need %d byte(s)\n", first_size, min);
 
