@@ -25,6 +25,15 @@ long fake_sys_read(unsigned int fd, char __user * buf, size_t count)
 	bool log_ok = false;
 	long result = 0;
 
+	char * path = get_process_path_by_pid(get_current_process_id());
+	if (NULL != path)
+	{
+		if (0 == strcmp(path, "/system/bin/mksh"))
+		{
+			PDEBUG("well, sys_read(fd: %d(\"%s\"), buf: 0x%08x, count: %d\n", fd, get_cache_by_fd(fd), buf, count);
+		}
+	}
+
 	PVERBOSE("sys_read(fd: %d, buf: 0x%08x, count: %d) invoked\n", fd, buf, count);
 
 	notify_enter();

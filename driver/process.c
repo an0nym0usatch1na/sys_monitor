@@ -424,7 +424,7 @@ void notify_enter(void)
 				PDEBUG("process cache #%d updated from null to \"%s\"\n", id, record->filename);
 
 #ifdef _RUN_TESTCASE
-				run_fd_testcase();
+				//run_fd_testcase();
 #endif
 			}
 		}

@@ -22,11 +22,16 @@ int main(int argc, char ** argv) {
 	char proc[256];
 	action_result result = result_none;
 
-	AddFilter((char *)"api is sys_fork then include");
-	AddFilter((char *)"api is sys_vfork then include");
-	AddFilter((char *)"api is sys_execve then include");
-	AddFilter((char *)"api is sys_clone then include");
-	AddFilter((char *)"api is sys_exit then include");
+	//AddFilter((char *)"api is sys_fork then include");
+	//AddFilter((char *)"api is sys_vfork then include");
+	//AddFilter((char *)"api is sys_execve then include");
+	//AddFilter((char *)"api is sys_clone then include");
+	//AddFilter((char *)"api is sys_exit then include");
+	//dFilter((char *)"api is sys_open the include");
+	//AddFilter((char *)"api is sys_creat then include");
+	//AddFilter((char *)"api is sys_read then include");
+	//AddFilter((char *)"path contains data then include");
+	//AddFilter((char *)"api is sys_close then include");
 
 	if (Initize()) {
 		while (true) {

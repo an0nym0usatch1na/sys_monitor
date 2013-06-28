@@ -191,7 +191,7 @@ bool AddFilter(char * filter) {
 				item->action = GetAction(action);
 				item->value_length = strlen(value);
 
-				assert(item->value_length > 0);
+				ASSERT(item->value_length > 0);
 
 				item->value = (char *)malloc(item->value_length + 1);
 				if (NULL != item->value) {

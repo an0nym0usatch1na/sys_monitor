@@ -69,6 +69,8 @@ void notify_enter(void);
 //notify monitor that sys_exeve is about to execute
 void notify_execve(void);
 
+int get_current_process_id(void);
+
 //get process record by pid
 process_record * get_record_by_pid(pid_t pid);
 

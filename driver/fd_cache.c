@@ -18,7 +18,7 @@
 
 #include "fd_cache.h"
 
-#define SYSMON_DEBUG
+#define SYSMON_WARN
 #include "./../share/debug.h"
 
 //testcase
@@ -629,11 +629,11 @@ char * get_cache_by_fd(unsigned int fd)
 		{
 			path = fd_record->filename;
 			
-			PDEBUG("pid #%d[fd #%d] is \"%s\"\n", pid, fd, path);
+			PVERBOSE("pid #%d[fd #%d] is \"%s\"\n", pid, fd, path);
 		}
 		else
 		{
-			PDEBUG("pid #%d[fd #%d] does not exists\n", pid, fd);
+			PVERBOSE("pid #%d[fd #%d] does not exists\n", pid, fd);
 		}
 
 		up_read(&record->file_fd_sem);
@@ -701,7 +701,7 @@ bool delete_cache_by_fd(unsigned int fd)
 
 		up_write(&record->file_fd_sem);
 
-		PDEBUG("pid #%d[fd #%d] delete result: %d\n", current->pid, fd, suc);
+		PVERBOSE("pid #%d[fd #%d] delete result: %d\n", current->pid, fd, suc);
 	}
 	else
 	{
