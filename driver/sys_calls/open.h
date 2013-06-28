@@ -11,4 +11,6 @@ void open_operation_init(unsigned long ** sys_call_table);
 
 void open_operation_cleanup(unsigned long ** sys_call_table);
 
+char * get_absolute_path_by_fd(unsigned int fd);
+
 #endif

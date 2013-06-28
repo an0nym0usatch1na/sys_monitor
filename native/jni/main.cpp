@@ -30,7 +30,7 @@ int main(int argc, char ** argv) {
 	//dFilter((char *)"api is sys_open the include");
 	//AddFilter((char *)"api is sys_creat then include");
 	//AddFilter((char *)"api is sys_read then include");
-	//AddFilter((char *)"path contains data then include");
+	AddFilter((char *)"path contains a.txt then include");
 	//AddFilter((char *)"api is sys_close then include");
 
 	if (Initize()) {

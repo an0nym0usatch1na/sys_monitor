@@ -15,11 +15,13 @@
 #include "log.h"
 
 #include "process.h"
-
 #include "fd_cache.h"
+#include "./sys_calls/open.h"	//we need function get_absolute_path_by_fd in it 
 
 #define SYSMON_WARN
 #include "./../share/debug.h"
+
+char * get_cache_by_fd_internal(unsigned int fd);
 
 //testcase
 void run_fd_testcase(void)
@@ -71,7 +73,7 @@ void run_fd_testcase(void)
 	//run testcase, check and delete
 	for (i = 0; i < 100; i++)
 	{
-		char * path = get_cache_by_fd((unsigned int)i);
+		char * path = get_cache_by_fd_internal((unsigned int)i);
 		if (NULL == path)
 		{
 			PERROR("testcase error, fd #%d does not exists\n", i);
@@ -584,7 +586,7 @@ bool delete_from_record(process_record * record, unsigned int fd)
 	return suc;
 }
 
-char * get_cache_by_fd(unsigned int fd)
+char * get_cache_by_fd_internal(unsigned int fd)
 {
 	char * path = NULL;
 	pid_t pid = current->pid;
@@ -629,11 +631,11 @@ char * get_cache_by_fd(unsigned int fd)
 		{
 			path = fd_record->filename;
 			
-			PVERBOSE("pid #%d[fd #%d] is \"%s\"\n", pid, fd, path);
+			PVERBOSE("pid #%d[fd #%u] is \"%s\"\n", pid, fd, path);
 		}
 		else
 		{
-			PVERBOSE("pid #%d[fd #%d] does not exists\n", pid, fd);
+			PVERBOSE("pid #%d[fd #%u] does not exists\n", pid, fd);
 		}
 
 		up_read(&record->file_fd_sem);
@@ -641,6 +643,30 @@ char * get_cache_by_fd(unsigned int fd)
 	else
 	{
 		PWARN("pid #%d process record not exists\n", pid);
+	}
+
+	return path;
+}
+
+char * get_cache_by_fd(unsigned int fd)
+{
+	char * path = get_cache_by_fd_internal(fd);
+
+	if (NULL == path)
+	{
+		//cache failed, but we got an chance to git it from system fd table
+		path = get_absolute_path_by_fd(fd);
+		if (NULL != path)
+		{
+			insert_into_cache(fd, path);
+
+			PDEBUG("pid #%d[fd #%u] does not exists, try get from system: \"%s\"\n", path);
+
+			kfree(path);
+
+			//finally, try again
+			path = get_cache_by_fd_internal(fd);
+		}
 	}
 
 	return path;

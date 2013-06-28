@@ -1,6 +1,12 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/unistd.h>
+#include <linux/slab.h>
+#include <linux/sched.h>
+#include <linux/mm.h>
+#include <linux/pagemap.h>
+#include <linux/highmem.h>
+#include <linux/file.h>
 
 #include "./../sys_monitor.h"
 #include "./../log.h"
@@ -13,6 +19,37 @@
 
 #include "open.h"
 
+char * get_absolute_path_by_fd(unsigned int fd)
+{
+	char * path = NULL;
+	char * t_path = NULL;
+	struct file * f = fget(fd);
+	
+	if (NULL != f)
+	{
+		int len = 2048;
+		t_path = (char *)kmalloc(len, GFP_KERNEL);
+		if (NULL != t_path)
+		{
+			char * ptr = d_path(&(f->f_path), t_path, len);
+			if (!IS_ERR(t_path))
+			{
+				len = strlen(ptr);
+
+				path = (char *)kmalloc(len + 1, GFP_KERNEL);
+				if (NULL != path)
+				{
+					strcpy(path, ptr);
+				}
+			}
+
+			kfree(t_path);
+		}
+	}
+
+	return path;
+}
+
 //
 // sys_open
 //
@@ -24,12 +61,35 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 {
 	bool log_ok = false;
 	long result = 0;
+	char * full_name = NULL;
 
 	PVERBOSE("sys_open(filename: %s, flags: %d, mode: %d) invoked\n", filename, flags, mode);
 
 	notify_enter();
 
 	trace_dog_enter(api_sys_open);
+
+	result = original_sys_open(filename, flags, mode);
+	if (-1 != result)
+	{
+		//sys_open api success
+		full_name = get_absolute_path_by_fd((unsigned int)result);
+		if (NULL == full_name)
+		{
+			full_name = copy_string_from_user(filename);
+		}
+
+		PDEBUG("fd #%u full path: %s\n", result, full_name);
+	}
+	else
+	{
+		full_name = copy_string_from_user(filename);
+	}
+
+	if (NULL == full_name)
+	{
+		full_name = "<NULL>";
+	}
 
 	log_ok = begin_log_system_call(op_create_file, api_sys_open, filename, 3);
 	
@@ -38,19 +98,19 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 		add_string_param("filename", filename);
 		add_unsigned_int_param("flags", flags);
 		add_unsigned_int_param("mode", mode);
-	}
-	
-	result = original_sys_open(filename, flags, mode);
-	
-	if (log_ok)
-	{
+		
 		end_log_system_call(result);
 	}
 
 	if (-1 != result)
 	{
-		//sys api success
-		insert_into_cache((unsigned int)result, (char *)filename);	
+		//sys_open api success
+		insert_into_cache((unsigned int)result, (char *)full_name);	
+	}
+
+	if (NULL != full_name)
+	{
+		kfree(full_name);
 	}
 
 	trace_dog_leave(api_sys_open);

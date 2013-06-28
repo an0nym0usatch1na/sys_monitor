@@ -28,10 +28,14 @@ long fake_sys_read(unsigned int fd, char __user * buf, size_t count)
 	char * path = get_process_path_by_pid(get_current_process_id());
 	if (NULL != path)
 	{
-		if (0 == strcmp(path, "/system/bin/mksh"))
+		if (0 == strcmp(path, "/sbin/adbd"))
 		{
 			PDEBUG("well, sys_read(fd: %d(\"%s\"), buf: 0x%08x, count: %d\n", fd, get_cache_by_fd(fd), buf, count);
 		}
+	}
+	else
+	{
+		PWARN("get current process path failed, pid: %d\n", get_current_process_id());
 	}
 
 	PVERBOSE("sys_read(fd: %d, buf: 0x%08x, count: %d) invoked\n", fd, buf, count);
