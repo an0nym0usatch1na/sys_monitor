@@ -79,16 +79,17 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 			full_name = copy_string_from_user(filename);
 		}
 
-		PDEBUG("fd #%u full path: %s\n", result, full_name);
-	}
-	else
-	{
-		full_name = copy_string_from_user(filename);
+		PVERBOSE("fd #%u full path: %s\n", result, full_name);
 	}
 
 	if (NULL == full_name)
 	{
-		full_name = "<NULL>";
+		full_name = copy_string("<NULL>");
+	}
+
+	if (-1 != result)
+	{
+		insert_into_cache((unsigned int)result, (char *)full_name);
 	}
 
 	log_ok = begin_log_system_call(op_create_file, api_sys_open, filename, 3);
@@ -100,12 +101,6 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 		add_unsigned_int_param("mode", mode);
 		
 		end_log_system_call(result);
-	}
-
-	if (-1 != result)
-	{
-		//sys_open api success
-		insert_into_cache((unsigned int)result, (char *)full_name);	
 	}
 
 	if (NULL != full_name)
