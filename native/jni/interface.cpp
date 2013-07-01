@@ -37,7 +37,11 @@ char * nexttok(char ** strp)
 	return nexttoksep(strp, (char *)" ");
 }
 
-int GetProcess(int pid, char * buffer, int buffer_size) {
+int GetProcessFromDriver(int pid, char * buffer, int buffer_size) {
+	return 0;
+}
+
+int GetProcessFromNative(int pid, char * buffer, int buffer_size) {
 	int fd = 0;
 	int r = 0;
 	char cmdline[1024];
@@ -90,7 +94,8 @@ int GetProcess(int pid, char * buffer, int buffer_size) {
 	} else if (NULL != ptr_name) {
 		r = snprintf(buffer, buffer_size, "%s", ptr_name);
 	} else {
-		r = snprintf(buffer, buffer_size, "PROCESS #%d", pid);
+		//get information failed, process may has gone
+		r = 0;
 	}
 
 	return r;

@@ -16,6 +16,9 @@ extern "C" {
 #include "filter.h"
 #include "interface.h"
 
+void Usage() {
+}
+
 int main(int argc, char ** argv) {
 	char buffer[10240];
 	char time[64];

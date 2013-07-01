@@ -50,6 +50,7 @@ typedef struct _filter_item {
 	action_item action;				//action type
 } filter_item;
 
+//export function
 bool AddFilter(char * filter); 
 
 action_result FilterLog(log_header * header, char * path, char * details); 

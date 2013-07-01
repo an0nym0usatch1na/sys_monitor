@@ -81,7 +81,7 @@ void lock_process_record(void);
 
 void unlock_process_record(void);
 
-//for test
+//export
 char * get_current_process_path(void);
 char * get_current_process_arguments(int * length);
 char * get_current_process_environment(int * length);

@@ -32,6 +32,7 @@ void fd_cache_cleanup(process_record * record);
 
 void run_fd_testcase(void);
 
+//initize function when load
 int process_monitor_init(void) 
 {
     int size = sizeof(void *) * HASH_SLOT_SIZE;
@@ -68,6 +69,7 @@ int process_monitor_init(void)
     return 0;
 }
 
+//cleanup an single process record
 void cleanup_process_record(process_record * record)
 {
 	if (NULL != record->filename)
@@ -88,6 +90,7 @@ void cleanup_process_record(process_record * record)
 	fd_cache_cleanup(record);
 }
 
+//cleanup function called when unload
 void process_monitor_cleanup(void)
 {
 	process_record * p = outstanding_header;
@@ -110,9 +113,10 @@ void process_monitor_cleanup(void)
 	PDEBUG("complete cleanup process cache\n");
 }
 
+//get current process`s id
 int get_current_process_id(void)
 {
-    //use pid as slot id, it works under none muti-thread os
+    //use pid as slot id, it works under none muti-thread os such as linux
     int id = current->pid;
     if (current->pid < 0 || current->pid >= HASH_SLOT_SIZE)
     {
@@ -176,6 +180,7 @@ int read_process_memory_locked(struct task_struct * tsk, unsigned long addr, voi
 	return buf - old_buf;
 }
 
+//get current process`s startup arguments from kernel
 char * get_current_process_arguments(int * length) 
 {
 	char * arg_buffer = NULL;
@@ -224,6 +229,7 @@ char * get_current_process_arguments(int * length)
 	return arg_buffer;
 }
 
+//get current process`s environment vars from kernel, not implitment yet
 char * get_current_process_environment(int * length)
 {
 	char * env_buffer = NULL;
@@ -233,6 +239,7 @@ char * get_current_process_environment(int * length)
 	return env_buffer;
 }
 
+//get current process`s binary absolute path from kernel
 char * get_current_process_path(void) 
 {
 	char * path = NULL;
@@ -288,6 +295,7 @@ char * get_current_process_path(void)
 	return path;
 }
 
+//build an process record from current process
 process_record * build_process_record(process_record * record)
 {
 	bool new_alloc = false;
@@ -344,6 +352,7 @@ process_record * build_process_record(process_record * record)
 	return record;
 }
 
+//update an process record to current process information
 void update_process_record(process_record * record)
 {
 	if (NULL != record)
@@ -352,11 +361,13 @@ void update_process_record(process_record * record)
 	}	
 }
 
+//notify current process has created
 void notify_create(void)
 {
 	//currently do nonthing
 }
 
+//notify current process is going to exit
 void notify_exit(void)
 {
 	//currently do nothing
@@ -367,7 +378,7 @@ void notify_enter(void)
 	process_record * record = NULL;
 	int id = get_current_process_id();
 
-	PVERBOSE("notify_enter executed, current process id is %d\n", id);
+	PVERBOSE("notify_enter invoked, current process id is %d\n", id);
 
 	if (-1 != id)
 	{
@@ -424,7 +435,7 @@ void notify_enter(void)
 				PDEBUG("process cache #%d updated from null to \"%s\"\n", id, record->filename);
 
 #ifdef _RUN_TESTCASE
-				//run_fd_testcase();
+				run_fd_testcase();
 #endif
 			}
 		}

@@ -90,7 +90,7 @@ action_result FilterValueWithFilter(char * value, filter_item * filter) {
 	return result;
 }
 
-column_item GetColumn(char * col) {
+column_item GetColumnFromString(char * col) {
 	if (0 == strcasecmp(col, "time")) {
 		return column_time;
 	} else if (0 == strcasecmp(col, "pid")) {
@@ -112,7 +112,7 @@ column_item GetColumn(char * col) {
 	return column_none;
 }
 
-operate_type GetOperate(char * op) {
+operate_type GetOperateFromString(char * op) {
 	if (0 == strcasecmp(op, "is")) {
 		return op_is;
 	} else if (0 == strcasecmp(op, "is not")) {
@@ -130,7 +130,7 @@ operate_type GetOperate(char * op) {
 	return op_none;	
 }
 
-action_item GetAction(char * action) {
+action_item GetActionFromString(char * action) {
 	if (0 == strcasecmp(action, "include")) {
 		return action_include;
 	} else if (0 == strcasecmp(action, "exclude")) {
@@ -140,15 +140,15 @@ action_item GetAction(char * action) {
 	return action_none;
 }
 
-void ListFilter(filter_item * item) {
+void PrintFilter(filter_item * item) {
 	printf("filter #%08x(%d, %d, %s, %d)\n", item, item->column, item->operate, item->value, item->action);
 }
 
-void ListAllFilter() {
+void PrintAllFilter() {
 	filter_item * p = filter_header;
 		
 	while (NULL != p) {
-		ListFilter(p);
+		PrintFilter(p);
 
 		p = p->next;
 	}
@@ -186,9 +186,9 @@ bool AddFilter(char * filter) {
 			item = (filter_item *)malloc(sizeof(filter_item));
 			if (NULL != item) {
 				item->next = NULL;
-				item->column = GetColumn(column);
-				item->operate = GetOperate(op);
-				item->action = GetAction(action);
+				item->column = GetColumnFromString(column);
+				item->operate = GetOperateFromString(op);
+				item->action = GetActionFromString(action);
 				item->value_length = strlen(value);
 
 				ASSERT(item->value_length > 0);
@@ -211,7 +211,7 @@ bool AddFilter(char * filter) {
 
 					PVERBOSE("filter #%08x(%d, %d, %s, %d) added to link\n", item, item->column, item->operate, item->value, item->action);
 
-					ListAllFilter();
+					PrintAllFilter();
 				} else {
 					PWARN("allocate memory failed at AddFilter");
 
@@ -232,6 +232,7 @@ bool AddFilter(char * filter) {
 	return ret;
 }
 
+//filter with specified filter
 action_result FilterOneLog(filter_item * filter, log_header * header, char * path, char * details) {
 	action_result result = result_none;
 	char buffer[256];
@@ -251,7 +252,15 @@ action_result FilterOneLog(filter_item * filter, log_header * header, char * pat
 		
 		case column_process:
 			//filter process name
-			GetProcess(header->pid, buffer, 256);
+			if (0 == GetProcessFromNative(header->pid, buffer, 256))
+			{
+				//get process from /proc/???/cmdline failed, so get it from kernel
+				if (0 == GetProcessFromDriver(header->pid, buffer, 256))
+				{
+					//kernel failed also
+					snprintf(buffer, 256, "PROCESS #%d", header->pid);
+				}
+			}
 			result = FilterValueWithFilter(buffer, filter);
 			break;
 
@@ -284,6 +293,7 @@ action_result FilterOneLog(filter_item * filter, log_header * header, char * pat
 	return result;
 }
 
+//filter an log with full filter
 action_result FilterLog(log_header * header, char * path, char * details) {
 	filter_item * p = NULL;
 	action_result result = result_include;	//default include
