@@ -471,6 +471,7 @@ file_fd_record * insert_into_link(process_record * record, unsigned int fd, char
 	return fd_record;
 }
 
+//delete and fd related record from hot cache and link
 bool delete_from_record(process_record * record, unsigned int fd)
 {
 	int i = 0;

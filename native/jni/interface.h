@@ -15,6 +15,8 @@ void Cleanup();
 
 int GetTime(int sec, int nsec, char * buffer, int buffer_size);
 
-int GetProcess(int pid, char * buffer, int buffer_size);
+int GetProcessFromNative(int pid, char * buffer, int buffer_size);
+
+int GetProcessFromDriver(int pid, char * buffer, int buffer_size);
 
 #endif

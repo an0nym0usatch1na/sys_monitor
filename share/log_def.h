@@ -14,7 +14,7 @@ typedef enum _operation_name
 	op_stat_file,
 	op_rename_file,
 	op_make_directory,
-	op_remane_directory,
+	op_rename_directory,
 	op_sync_file,
 	op_open_pipe,
 	op_symbol_link,

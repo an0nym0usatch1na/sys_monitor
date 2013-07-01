@@ -11,6 +11,7 @@
 // struct declare
 //
 
+//file fd storage struct, each instance represents an fd
 typedef struct _file_fd_record
 {
 	struct _file_fd_record * prev;
@@ -24,6 +25,7 @@ typedef struct _file_fd_record
 	char * filename;
 } file_fd_record;
 
+//
 typedef struct _process_record 
 {
 	struct _process_record * prev;									//previous outstanding record

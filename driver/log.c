@@ -366,7 +366,7 @@ bool begin_log_system_call2(operation_name oper, api_name api, unsigned int fd, 
 
 	path_safe = copy_string(get_cache_by_fd(fd));
 	
-	PVERBOSE("get path \"%s\" fOr fd #%d from fd cache\n", path_safe, fd);
+	PVERBOSE("get path \"%s\" fOr fd 0x%08x from fd cache\n", path_safe, fd);
 
 	return begin_log_system_call_internal(oper, api, path_safe, param_count);
 }
@@ -639,6 +639,30 @@ const char * operation_to_string(operation_name operation) {
 		case op_io_control_file:
 			return "IOCTL file";
 
+		case op_stat_file:
+			return "Stat file";
+
+		case op_rename_file:
+			return "Rename file";
+
+		case op_make_directory:
+			return "Make directory";
+
+		case op_rename_directory:
+			return "Rename directory";
+
+		case op_sync_file:
+			return "Sync file";
+
+		case op_open_pipe:
+			return "Open pipe";
+
+		case op_symbol_link:
+			return "Symbol link";
+
+		case op_read_symbol_link:
+			return "Read symbol link";
+
 		case op_load_library:
 			return "Load library";
 
@@ -682,6 +706,36 @@ const char * api_to_string(api_name api) {
 		case api_sys_ioctl:
 			return "sys_ioctl";
 
+		case api_sys_stat:
+			return "sys_stat";
+
+		case api_sys_lstat:
+			return "sys_lstat";
+
+		case api_sys_fstat:
+			return "sys_fstat";
+
+		case api_sys_rename:
+			return "sys_rename";
+
+		case api_sys_mkdir:
+			return "sys_mkdir";
+
+		case api_sys_rmdir:
+			return "sys_rmdir";
+
+		case api_sys_sync:
+			return "sys_sync";
+
+		case api_sys_pipe:
+			return "sys_pipe";
+
+		case api_sys_symlink:
+			return "sys_symlink";
+
+		case api_sys_readlink:
+			return "sys_readlink";
+
 		case api_sys_uselib:
 			return "sys_uselib";
 
@@ -690,6 +744,12 @@ const char * api_to_string(api_name api) {
 
 		case api_sys_fork:
 			return "sys_fork";
+
+		case api_sys_vfork:
+			return "sys_vfork";
+
+		case api_sys_clone:
+			return "sys_clone";
 
 		case api_sys_execve:
 			return "sys_execve";

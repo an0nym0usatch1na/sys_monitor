@@ -5,7 +5,6 @@
 //4096 * 2 ^ 7 = 512KB
 #define PAGE_INCREASE 7
 
-
 //
 // structs
 //

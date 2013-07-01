@@ -5,9 +5,7 @@
 
 #define _DEBUG 1
 
-#define _RUN_TESTCASE 1
-
-//#define DEVICE_MAJOR 5213	//I love this number
+//#define _RUN_TESTCASE 1
 
 //Some microsoft c defines
 

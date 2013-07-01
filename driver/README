@@ -6,7 +6,10 @@ sys_read
 sys_write
 sys_close
 sys_ioctl
+sys_uselib
+sys_clone
 sys_fork
 sys_vfork
-sys_exec
+sys_execve
 sys_exit
+sys_kill

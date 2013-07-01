@@ -22,16 +22,16 @@ lpfn_original_sys_close original_sys_close = NULL;
 
 long fake_sys_close(unsigned int fd)
 {
+	bool delete_ok = false;
 	bool log_ok = false;
 	long result = 0;
+
+	trace_dog_enter(api_sys_close);
 
 	notify_enter();
 
 	PVERBOSE("sys_close(fd: %d) invoked\n", fd);
 
-	trace_dog_enter(api_sys_close);
-
-	//log_ok = begin_log_system_call(op_close_file, api_sys_close, NULL, 1);
 	log_ok = begin_log_system_call2(op_close_file, api_sys_close, fd, 1);
 	if (log_ok)
 	{
@@ -48,7 +48,11 @@ long fake_sys_close(unsigned int fd)
 	if (0 == result)
 	{
 		//close success
-		delete_cache_by_fd(fd);
+		delete_ok = delete_cache_by_fd(fd);
+		if (!delete_ok)
+		{
+			PWARN("delete cache(\"%s\") failed when sys_close(fd: 0x%08x)\n", get_cache_by_fd(fd), fd);
+		}
 	}
 
 	trace_dog_leave(api_sys_close);

@@ -24,12 +24,13 @@ long fake_sys_read(unsigned int fd, char __user * buf, size_t count)
 {
 	bool log_ok = false;
 	long result = 0;
+	char * path = NULL;
 
 	trace_dog_enter(api_sys_read);
 
 	notify_enter();
 
-	char * path = get_process_path_by_pid(get_current_process_id());
+	path = get_process_path_by_pid(get_current_process_id());
 	if (NULL == path)
 	{
 		PWARN("get current process path failed, pid: %d\n", get_current_process_id());

@@ -62,7 +62,13 @@ int main(int argc, char ** argv) {
 
 			if (result_include == result) {
 				GetTime(header.sec, header.nsec, time, 64);
-				GetProcess(header.pid, proc, 256);
+				if (0 == GetProcessFromNative(header.pid, proc, 256))
+				{
+					if (0 == GetProcessFromDriver(header.pid, proc, 256))
+					{
+						snprintf(proc, 256, "PROCESS #%d", header.pid);
+					}
+				}
 
 				snprintf(buffer,
 							sizeof(buffer),

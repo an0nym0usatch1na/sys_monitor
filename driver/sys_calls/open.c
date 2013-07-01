@@ -90,9 +90,9 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 			}
 		}
 
-		PVERBOSE("fd #%u full path: %s\n", result, full_name);
+		PVERBOSE("fd 0x%08x full path: %s\n", result, full_name);
 		
-		//insert_into_cache((unsigned int)result, (char *) full_name);
+		insert_into_cache((unsigned int)result, (char *) full_name);
 
 		if (NULL != full_name)
 		{
@@ -151,9 +151,9 @@ long fake_sys_creat(const char __user * pathname, int mode)
 			}
 		}
 
-		PVERBOSE("fd #%u full path: %s\n", result, full_name);
+		PVERBOSE("fd 0x%08x full path: %s\n", result, full_name);
 		
-		//insert_into_cache((unsigned int)result, (char *) full_name);
+		insert_into_cache((unsigned int)result, (char *) full_name);
 
 		if (NULL != full_name)
 		{
