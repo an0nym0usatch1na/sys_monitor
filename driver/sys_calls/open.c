@@ -14,7 +14,7 @@
 #include "./../process.h"
 #include "./../fd_cache.h"
 
-#define SYSMON_DEBUG
+#define SYSMON_ERROR
 #include "./../../share/debug.h"
 
 #include "open.h"
@@ -23,15 +23,18 @@ char * get_absolute_path_by_fd(unsigned int fd)
 {
 	char * path = NULL;
 	char * t_path = NULL;
-	struct file * f = fget(fd);
-	
+	struct file * f = NULL;
+
+	f = fget(fd);
 	if (NULL != f)
 	{
 		int len = 2048;
 		t_path = (char *)kmalloc(len, GFP_KERNEL);
 		if (NULL != t_path)
 		{
-			char * ptr = d_path(&(f->f_path), t_path, len);
+			char * ptr = NULL;
+			
+			ptr = d_path(&(f->f_path), t_path, len);
 			if (!IS_ERR(t_path))
 			{
 				len = strlen(ptr);
@@ -45,6 +48,8 @@ char * get_absolute_path_by_fd(unsigned int fd)
 
 			kfree(t_path);
 		}
+
+		fput(f);
 	}
 
 	return path;
@@ -61,39 +66,42 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 {
 	bool log_ok = false;
 	long result = 0;
-	char * full_name = NULL;
-
-	PVERBOSE("sys_open(filename: %s, flags: %d, mode: %d) invoked\n", filename, flags, mode);
-
-	notify_enter();
 
 	trace_dog_enter(api_sys_open);
 
+	notify_enter();
+
+	PVERBOSE("sys_open(filename: %s, flags: %d, mode: %d) invoked\n", filename, flags, mode);
+
+	//call real function at first because we need its result
 	result = original_sys_open(filename, flags, mode);
 	if (-1 != result)
 	{
+		char * full_name = NULL;
+
 		//sys_open api success
 		full_name = get_absolute_path_by_fd((unsigned int)result);
 		if (NULL == full_name)
 		{
 			full_name = copy_string_from_user(filename);
+			if (NULL == full_name)
+			{
+				full_name = copy_string("<NULL>");
+			}
 		}
 
 		PVERBOSE("fd #%u full path: %s\n", result, full_name);
+		
+		//insert_into_cache((unsigned int)result, (char *) full_name);
+
+		if (NULL != full_name)
+		{
+			kfree(full_name);
+		}
 	}
 
-	if (NULL == full_name)
-	{
-		full_name = copy_string("<NULL>");
-	}
-
-	if (-1 != result)
-	{
-		insert_into_cache((unsigned int)result, (char *)full_name);
-	}
-
+	//log event
 	log_ok = begin_log_system_call(op_create_file, api_sys_open, filename, 3);
-	
 	if (log_ok)
 	{
 		add_string_param("filename", filename);
@@ -101,11 +109,6 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 		add_unsigned_int_param("mode", mode);
 		
 		end_log_system_call(result);
-	}
-
-	if (NULL != full_name)
-	{
-		kfree(full_name);
 	}
 
 	trace_dog_leave(api_sys_open);
@@ -125,32 +128,49 @@ long fake_sys_creat(const char __user * pathname, int mode)
 	bool log_ok = false;
 	long result = 0;
 
-	PVERBOSE("sys_creat(pathname: %s, mode: %d) invoked\n", pathname, mode);
-
+	trace_dog_enter(api_sys_create);
+	
 	notify_enter();
 
-	trace_dog_enter(api_sys_create);
+	PVERBOSE("sys_creat(pathname: %s, mode: %d) invoked\n", pathname, mode);
 
-	log_ok = begin_log_system_call(op_create_file, api_sys_create, pathname, 2);
+	//call real function first
+	result = original_sys_creat(pathname, mode);
+	if (-1 != result)
+	{
+		char * full_name = NULL;
+
+		//sys_open api success
+		full_name = get_absolute_path_by_fd((unsigned int)result);
+		if (NULL == full_name)
+		{
+			full_name = copy_string_from_user(pathname);
+			if (NULL == full_name)
+			{
+				full_name = copy_string("<NULL>");
+			}
+		}
+
+		PVERBOSE("fd #%u full path: %s\n", result, full_name);
+		
+		//insert_into_cache((unsigned int)result, (char *) full_name);
+
+		if (NULL != full_name)
+		{
+			kfree(full_name);
+		}
+	}
 	
+	//log event
+	log_ok = begin_log_system_call(op_create_file, api_sys_create, pathname, 2);
 	if (log_ok)
 	{
 		add_string_param("pathname", pathname);
 		add_unsigned_int_param("mode", mode);
-	}
-	
-	result = original_sys_creat(pathname, mode);
-	
-	if (log_ok)
-	{
+		
 		end_log_system_call(result);
 	}
-
-	if (-1 != result)
-	{
-		insert_into_cache((unsigned int)result, (char *)pathname);
-	}
-
+	
 	trace_dog_leave(api_sys_create);
 	
 	return result;

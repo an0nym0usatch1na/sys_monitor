@@ -33,6 +33,8 @@ void end_log_system_call(long ret);
 
 char * copy_string_from_user(const __user char * path);
 
+char * copy_string(char * path);
+
 const char * operation_to_string(operation_name operation);
 
 const char * api_to_string(api_name api);

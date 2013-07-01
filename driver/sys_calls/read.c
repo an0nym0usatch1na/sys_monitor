@@ -25,27 +25,19 @@ long fake_sys_read(unsigned int fd, char __user * buf, size_t count)
 	bool log_ok = false;
 	long result = 0;
 
+	trace_dog_enter(api_sys_read);
+
+	notify_enter();
+
 	char * path = get_process_path_by_pid(get_current_process_id());
-	if (NULL != path)
-	{
-		if (0 == strcmp(path, "/sbin/adbd"))
-		{
-			PDEBUG("well, sys_read(fd: %d(\"%s\"), buf: 0x%08x, count: %d\n", fd, get_cache_by_fd(fd), buf, count);
-		}
-	}
-	else
+	if (NULL == path)
 	{
 		PWARN("get current process path failed, pid: %d\n", get_current_process_id());
 	}
 
 	PVERBOSE("sys_read(fd: %d, buf: 0x%08x, count: %d) invoked\n", fd, buf, count);
 
-	notify_enter();
-
-	trace_dog_enter(api_sys_read);
-
 	log_ok = begin_log_system_call2(op_read_file, api_sys_read, fd, 3);
-	
 	if (log_ok)
 	{
 		add_unsigned_int_param("fd", fd);

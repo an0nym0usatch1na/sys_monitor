@@ -25,14 +25,14 @@ long fake_sys_close(unsigned int fd)
 	bool log_ok = false;
 	long result = 0;
 
+	notify_enter();
+
 	PVERBOSE("sys_close(fd: %d) invoked\n", fd);
 
-	notify_enter();
-	
 	trace_dog_enter(api_sys_close);
 
+	//log_ok = begin_log_system_call(op_close_file, api_sys_close, NULL, 1);
 	log_ok = begin_log_system_call2(op_close_file, api_sys_close, fd, 1);
-	
 	if (log_ok)
 	{
 		add_unsigned_int_param("fd", fd);

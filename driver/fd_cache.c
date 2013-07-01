@@ -18,7 +18,7 @@
 #include "fd_cache.h"
 #include "./sys_calls/open.h"	//we need function get_absolute_path_by_fd in it 
 
-#define SYSMON_WARN
+#define SYSMON_DEBUG
 #include "./../share/debug.h"
 
 char * get_cache_by_fd_internal(unsigned int fd);
@@ -76,14 +76,14 @@ void run_fd_testcase(void)
 		char * path = get_cache_by_fd_internal((unsigned int)i);
 		if (NULL == path)
 		{
-			PERROR("testcase error, fd #%d does not exists\n", i);
+			PERROR("testcase error, fd 0x%08x does not exists\n", i);
 
 			continue;
 		}
 
 		if (i != (int)path[0])
 		{
-			PERROR("testcase error, fd #%d not match path #%d\n", i, (int)path[0]);
+			PERROR("testcase error, fd 0x%08x not match path #%d\n", i, (int)path[0]);
 
 			continue;
 		}
@@ -294,7 +294,7 @@ int get_insert_index(process_record * record, unsigned int fd)
 		}
 	}
 
-	PVERBOSE("found fd #%u insert index at %d, prev fd: %u, next fd: %u\n", fd, fit_index, prev_fd, next_fd);
+	PVERBOSE("found fd 0x%08x insert index at %d, prev fd: %u, next fd: %u\n", fd, fit_index, prev_fd, next_fd);
 
 	return fit_index;
 }
@@ -465,7 +465,7 @@ file_fd_record * insert_into_link(process_record * record, unsigned int fd, char
 		record->file_fd_head = fd_record;
 		record->fd_count++;
 
-		PVERBOSE("allocate and insert fd #%d into file_fd link succ\n", fd);
+		PVERBOSE("allocate and insert fd 0x%08x into file_fd link succ\n", fd);
 	}
 
 	return fd_record;
@@ -485,13 +485,13 @@ bool delete_from_record(process_record * record, unsigned int fd)
 		//hot cache failed, go normally
 		b_hot = false;
 
-		PVERBOSE("find fd #%d in hot cache failed, now try normal one\n", fd);
+		PVERBOSE("find fd 0x%08x in hot cache failed, now try normal one\n", fd);
 			
 		fd_record = find_record_in_link(record, fd);
 	}
 	else
 	{
-		PVERBOSE("find fd #%d in hot cache #%d\n", fd, del_index);
+		PVERBOSE("find fd 0x%08x in hot cache #%d\n", fd, del_index);
 	}
 
 	if (NULL != fd_record)
@@ -611,7 +611,7 @@ char * get_cache_by_fd_internal(unsigned int fd)
 		fd_record = find_record_in_hot_cache(record, fd, &index);
 		if (NULL == fd_record)
 		{
-			PVERBOSE("pid #%d hot cache not found fd #%d, now find normally\n", pid, fd);
+			PVERBOSE("pid #%d hot cache not found fd 0x%08x, now find normally\n", pid, fd);
 
 			//hot cache failed, find normally
 			fd_record = find_record_in_link(record, fd);
@@ -623,7 +623,7 @@ char * get_cache_by_fd_internal(unsigned int fd)
 		}
 		else
 		{
-			PVERBOSE("pid #%d fd #%d hot cache found at #%d\n", pid, fd, index);
+			PVERBOSE("pid #%d fd 0x%08x hot cache found at #%d\n", pid, fd, index);
 		}
 		
 		//get the filename from record
@@ -631,11 +631,11 @@ char * get_cache_by_fd_internal(unsigned int fd)
 		{
 			path = fd_record->filename;
 			
-			PVERBOSE("pid #%d[fd #%u] is \"%s\"\n", pid, fd, path);
+			PVERBOSE("pid #%d[fd 0x%08x] is \"%s\"\n", pid, fd, path);
 		}
 		else
 		{
-			PVERBOSE("pid #%d[fd #%u] does not exists\n", pid, fd);
+			PVERBOSE("pid #%d[fd 0x%08x] does not exists\n", pid, fd);
 		}
 
 		up_read(&record->file_fd_sem);
@@ -651,21 +651,24 @@ char * get_cache_by_fd_internal(unsigned int fd)
 char * get_cache_by_fd(unsigned int fd)
 {
 	char * path = get_cache_by_fd_internal(fd);
-
 	if (NULL == path)
 	{
-		//cache failed, but we got an chance to git it from system fd table
+		//cache failed, but we got an chance to get it from system fd table
 		path = get_absolute_path_by_fd(fd);
 		if (NULL != path)
 		{
 			insert_into_cache(fd, path);
 
-			PDEBUG("pid #%d[fd #%u] does not exists, try get from system: \"%s\"\n", path);
+			PDEBUG("pid #%d[fd 0x%08x] does not exists, try get from system: \"%s\"\n", current->pid, fd, path);
 
 			kfree(path);
 
 			//finally, try again
 			path = get_cache_by_fd_internal(fd);
+		}
+		else
+		{
+			PDEBUG("pid #%d[fd 0x%08x] get path failed\n", current->pid, fd);
 		}
 	}
 
@@ -675,7 +678,12 @@ char * get_cache_by_fd(unsigned int fd)
 void insert_into_cache(unsigned int fd, char * path)
 {
 	process_record * record = NULL;
-	
+
+	if (NULL == path)
+	{
+		return;
+	}
+
 	//lock process reocrd first
 	lock_process_record();
 
@@ -695,7 +703,7 @@ void insert_into_cache(unsigned int fd, char * path)
 		{
 			insert_into_hot_cache(record, fd_record);
 			
-			PDEBUG("pid #%d[fd #%d] updated to \"%s\"\n", current->pid, fd, path);
+			PDEBUG("pid #%d[fd 0x%08x] updated to \"%s\"\n", current->pid, fd, path);
 		}
 
 		up_write(&record->file_fd_sem);
@@ -727,7 +735,7 @@ bool delete_cache_by_fd(unsigned int fd)
 
 		up_write(&record->file_fd_sem);
 
-		PVERBOSE("pid #%d[fd #%d] delete result: %d\n", current->pid, fd, suc);
+		PVERBOSE("pid #%d[fd 0x%08x] delete result: %d\n", current->pid, fd, suc);
 	}
 	else
 	{
