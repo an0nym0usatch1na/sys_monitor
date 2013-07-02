@@ -660,7 +660,7 @@ char * get_cache_by_fd(unsigned int fd)
 		{
 			insert_into_cache(fd, path);
 
-			PDEBUG("pid #%d[fd 0x%08x] does not exists, try get from system: \"%s\"\n", current->pid, fd, path);
+			PVERBOSE("pid #%d[fd 0x%08x] does not exists, try get from system: \"%s\"\n", current->pid, fd, path);
 
 			kfree(path);
 

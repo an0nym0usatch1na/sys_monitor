@@ -160,7 +160,7 @@ long fake_sys_creat(const char __user * pathname, int mode)
 			kfree(full_name);
 		}
 	}
-	
+
 	//log event
 	log_ok = begin_log_system_call_by_user_path(op_create_file, api_sys_create, pathname, 2);
 	if (log_ok)

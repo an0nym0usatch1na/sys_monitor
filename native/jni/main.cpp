@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
 	char proc[256];
 	action_result result = result_none;
 
-	//AddFilter((char *)"api is sys_fork then include");
+	AddFilter((char *)"process is /sbin/adbd then exclude");
 	//AddFilter((char *)"api is sys_vfork then include");
 	//AddFilter((char *)"api is sys_execve then include");
 	//AddFilter((char *)"api is sys_clone then include");

@@ -362,10 +362,15 @@ bool begin_log_system_call_internal(operation_name oper, api_name api, char * pa
 
 bool begin_log_system_call_by_fd(operation_name oper, api_name api, unsigned int fd, int param_count)
 {
+	char * path = NULL;
 	char * path_safe = NULL;
 
-	path_safe = copy_string(get_cache_by_fd(fd));
-	
+	path = get_cache_by_fd(fd);
+	if (NULL != path)
+	{
+		path_safe = copy_string(path);
+	}
+
 	PVERBOSE("get path \"%s\" fOr fd 0x%08x from fd cache\n", path_safe, fd);
 
 	return begin_log_system_call_internal(oper, api, path_safe, param_count);
@@ -373,12 +378,18 @@ bool begin_log_system_call_by_fd(operation_name oper, api_name api, unsigned int
 
 bool begin_log_system_call_by_kernel_path(operation_name oper, api_name api, char * path, int param_count)
 {
-	return begin_log_system_call_internal(oper, api, path, param_count);
+	char * path_safe = NULL;
+
+	if (NULL != path)
+	{
+		path_safe = copy_string(path);
+	}
+
+	return begin_log_system_call_internal(oper, api, path_safe, param_count);
 }
 
 bool begin_log_system_call_by_user_path(operation_name oper, api_name api, const __user char * path, int param_count)
 {
-	bool suc = false;
 	char * path_safe = NULL;
 	
 	if (NULL != path)
@@ -386,14 +397,7 @@ bool begin_log_system_call_by_user_path(operation_name oper, api_name api, const
 		path_safe = copy_string_from_user(path);
 	}
 
-	suc = begin_log_system_call_internal(oper, api, path_safe, param_count);
-	
-	if (NULL != path_safe)
-	{
-		kfree(path_safe);
-	}
-
-	return suc;
+	return begin_log_system_call_internal(oper, api, path_safe, param_count);
 }
 
 bool begin_log_system_call(operation_name oper, api_name api, int param_count)
@@ -655,7 +659,7 @@ const char * operation_to_string(operation_name operation) {
 			return "Close file";
 
 		case op_io_control_file:
-			return "IOCTL file";
+			return "Ioctl file";
 
 		case op_stat_file:
 			return "Stat file";

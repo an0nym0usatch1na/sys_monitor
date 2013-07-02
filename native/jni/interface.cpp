@@ -165,7 +165,31 @@ const char * OperationToString(operation_name operation) {
 			return "Close file";
 
 		case op_io_control_file:
-			return "IOCTL file";
+			return "Ioctl file";
+
+  		case op_stat_file:
+			return "Stat file";
+
+		case op_rename_file:
+			return "Rename file";
+
+		case op_make_directory:
+			return "Make directory";
+
+		case op_rename_directory:
+			return "Rename directory";
+
+		case op_sync_file:
+			return "Sync file";
+
+		case op_open_pipe:
+			return "Open pipe";
+
+		case op_symbol_link:
+			return "Symbol link";
+
+		case op_read_symbol_link:
+			return "Read symbol link";
 
 		case op_load_library:
 			return "Load library";
@@ -209,6 +233,36 @@ const char * ApiToString(api_name api) {
 
 		case api_sys_ioctl:
 			return "sys_ioctl";
+
+        case api_sys_stat:
+			return "sys_stat";
+
+		case api_sys_lstat:
+			return "sys_lstat";
+
+		case api_sys_fstat:
+			return "sys_fstat";
+
+		case api_sys_rename:
+			return "sys_rename";
+
+		case api_sys_mkdir:
+			return "sys_mkdir";
+
+		case api_sys_rmdir:
+			return "sys_rmdir";
+
+		case api_sys_sync:
+			return "sys_sync";
+
+		case api_sys_pipe:
+			return "sys_pipe";
+
+		case api_sys_symlink:
+			return "sys_symlink";
+
+		case api_sys_readlink:
+			return "sys_readlink";
 
 		case api_sys_uselib:
 			return "sys_uselib";
