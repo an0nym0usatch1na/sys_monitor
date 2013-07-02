@@ -704,7 +704,7 @@ void insert_into_cache(unsigned int fd, char * path)
 		{
 			insert_into_hot_cache(record, fd_record);
 			
-			PDEBUG("pid #%d[fd 0x%08x] updated to \"%s\"\n", current->pid, fd, path);
+			PVERBOSE("pid #%d[fd 0x%08x] updated to \"%s\"\n", current->pid, fd, path);
 		}
 
 		up_write(&record->file_fd_sem);

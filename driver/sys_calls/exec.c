@@ -52,14 +52,14 @@ long fake_sys_exec(const char __user * filenamei,
 {
 	bool log_ok = false;
 
-	notify_enter();
-
-	notify_execve();
-
 	trace_dog_enter(api_sys_execve);
 
-	log_ok = begin_log_system_call(op_execve_proc, api_sys_execve, NULL, 4);
-	
+	//notify_enter();
+
+	//notify_execve();
+
+	/*
+	log_ok = begin_log_system_call_by_user_path(op_execve_proc, api_sys_execve, filenamei, 4);
 	if (log_ok)
 	{
 		add_string_param("filenamei", filenamei);
@@ -67,12 +67,14 @@ long fake_sys_exec(const char __user * filenamei,
 		add_pointer_param("envp", (unsigned char *)envp);
 		add_pointer_param("regs", (unsigned char *)regs);
 
+		//zero means that sys_execve function will never return 
 		end_log_system_call(0);
 	}
+	*/
 
 	trace_dog_leave(api_sys_execve);
 
-	PDEBUG("sys_execve(\"%s\")\n", filenamei);
+	//PDEBUG("sys_execve(\"%s\")\n", filenamei);
 
 	// this api will not return on success, so we can not get its result
 	return original_sys_exec(filenamei, argv, envp, regs);

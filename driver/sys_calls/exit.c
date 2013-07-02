@@ -23,12 +23,11 @@ long fake_sys_exit(int error_code)
 {
 	bool log_ok = false;
 
-	notify_enter();
-
 	trace_dog_enter(api_sys_exit);
 
-	log_ok = begin_log_system_call(op_exit_proc, api_sys_exit, NULL, 1);
-	
+	notify_enter();
+
+	log_ok = begin_log_system_call(op_exit_proc, api_sys_exit, 1);
 	if (log_ok)
 	{
 		add_unsigned_int_param("error_code", error_code);

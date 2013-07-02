@@ -25,12 +25,11 @@ long fake_sys_write(unsigned int fd, const char __user * buf, size_t count)
 	bool log_ok = false;
 	long result = 0;
 
-	notify_enter();
-
 	trace_dog_enter(api_sys_write);
 
-	log_ok = begin_log_system_call(op_write_file, api_sys_write, get_cache_by_fd(fd), 3);
-	
+	notify_enter();
+
+	log_ok = begin_log_system_call_by_fd(op_write_file, api_sys_write, fd, 3);
 	if (log_ok)
 	{
 		add_unsigned_int_param("fd", fd);

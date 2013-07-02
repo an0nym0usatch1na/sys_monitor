@@ -101,7 +101,7 @@ long fake_sys_open(const char __user * filename, int flags, int mode)
 	}
 
 	//log event
-	log_ok = begin_log_system_call(op_create_file, api_sys_open, filename, 3);
+	log_ok = begin_log_system_call_by_user_path(op_create_file, api_sys_open, filename, 3);
 	if (log_ok)
 	{
 		add_string_param("filename", filename);
@@ -162,7 +162,7 @@ long fake_sys_creat(const char __user * pathname, int mode)
 	}
 	
 	//log event
-	log_ok = begin_log_system_call(op_create_file, api_sys_create, pathname, 2);
+	log_ok = begin_log_system_call_by_user_path(op_create_file, api_sys_create, pathname, 2);
 	if (log_ok)
 	{
 		add_string_param("pathname", pathname);

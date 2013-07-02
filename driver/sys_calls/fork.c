@@ -1,6 +1,7 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/unistd.h>
+#include <linux/slab.h>
 
 #include "./../sys_monitor.h"
 #include "./../log.h"
@@ -59,13 +60,16 @@ long fake_sys_clone(unsigned long clone_flags,
 {
 	bool log_ok = false;
 	long result = 0;
-
-	notify_enter();
+	char * process_path = NULL;
 
 	trace_dog_enter(api_sys_clone);
 
-	log_ok = begin_log_system_call(op_fork_proc, api_sys_clone, NULL, 6);
-	
+	notify_enter();
+
+	//get current process path as log path
+	process_path = get_current_process_path();
+
+	log_ok = begin_log_system_call_by_kernel_path(op_fork_proc, api_sys_clone, process_path, 6);
 	if (log_ok)
 	{
 		add_unsigned_int_param("clone_flags", clone_flags);
@@ -74,6 +78,11 @@ long fake_sys_clone(unsigned long clone_flags,
 		add_unsigned_int_param("tls_val", tls_val);
 		add_pointer_param("child_tidptr", (unsigned char *)child_tidptr);
 		add_pointer_param("regs", (unsigned char *)regs);
+	}
+
+	if (NULL != process_path)
+	{
+		kfree(process_path);
 	}
 	
 	result = original_sys_clone(clone_flags, newsp, parent_tidptr, tls_val, child_tidptr, regs);
@@ -119,16 +128,23 @@ long fake_sys_vfork(struct pt_regs * regs)
 {
 	bool log_ok = false;
 	long result = 0;
-
-	notify_enter();
+	char * process_path = NULL;
 
 	trace_dog_enter(api_sys_vfork);
 
-	log_ok = begin_log_system_call(op_fork_proc, api_sys_vfork, NULL, 1);
-	
+	notify_enter();
+
+	process_path = get_current_process_path();
+
+	log_ok = begin_log_system_call_by_kernel_path(op_fork_proc, api_sys_vfork, process_path, 1);
 	if (log_ok)
 	{
 		add_pointer_param("regs", (unsigned char *)regs);
+	}
+
+	if (NULL != process_path)
+	{
+		kfree(process_path);
 	}
 	
 	result = original_sys_vfork(regs);
@@ -174,16 +190,23 @@ long fake_sys_fork(struct pt_regs * regs)
 {
 	bool log_ok = false;
 	long result = 0;
-
-	notify_enter();
+	char * process_path = NULL;
 
 	trace_dog_enter(api_sys_fork);
 
-	log_ok = begin_log_system_call(op_fork_proc, api_sys_fork, NULL, 1);
-	
+	notify_enter();
+
+	process_path = get_current_process_path();
+
+	log_ok = begin_log_system_call_by_kernel_path(op_fork_proc, api_sys_fork, process_path, 1);
 	if (log_ok)
 	{
 		add_pointer_param("regs", (unsigned char *)regs);
+	}
+
+	if (NULL != process_path)
+	{
+		kfree(process_path);
 	}
 
 	result = original_sys_fork(regs);

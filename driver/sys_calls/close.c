@@ -32,7 +32,7 @@ long fake_sys_close(unsigned int fd)
 
 	PVERBOSE("sys_close(fd: %d) invoked\n", fd);
 
-	log_ok = begin_log_system_call2(op_close_file, api_sys_close, fd, 1);
+	log_ok = begin_log_system_call_by_fd(op_close_file, api_sys_close, fd, 1);
 	if (log_ok)
 	{
 		add_unsigned_int_param("fd", fd);

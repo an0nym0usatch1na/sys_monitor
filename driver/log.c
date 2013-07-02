@@ -360,7 +360,7 @@ bool begin_log_system_call_internal(operation_name oper, api_name api, char * pa
 	}
 }
 
-bool begin_log_system_call2(operation_name oper, api_name api, unsigned int fd, int param_count)
+bool begin_log_system_call_by_fd(operation_name oper, api_name api, unsigned int fd, int param_count)
 {
 	char * path_safe = NULL;
 
@@ -371,8 +371,14 @@ bool begin_log_system_call2(operation_name oper, api_name api, unsigned int fd, 
 	return begin_log_system_call_internal(oper, api, path_safe, param_count);
 }
 
-bool begin_log_system_call(operation_name oper, api_name api, const __user char * path, int param_count)
+bool begin_log_system_call_by_kernel_path(operation_name oper, api_name api, char * path, int param_count)
 {
+	return begin_log_system_call_internal(oper, api, path, param_count);
+}
+
+bool begin_log_system_call_by_user_path(operation_name oper, api_name api, const __user char * path, int param_count)
+{
+	bool suc = false;
 	char * path_safe = NULL;
 	
 	if (NULL != path)
@@ -380,7 +386,19 @@ bool begin_log_system_call(operation_name oper, api_name api, const __user char 
 		path_safe = copy_string_from_user(path);
 	}
 
-	return begin_log_system_call_internal(oper, api, path_safe, param_count);
+	suc = begin_log_system_call_internal(oper, api, path_safe, param_count);
+	
+	if (NULL != path_safe)
+	{
+		kfree(path_safe);
+	}
+
+	return suc;
+}
+
+bool begin_log_system_call(operation_name oper, api_name api, int param_count)
+{
+	return begin_log_system_call_internal(oper, api, NULL, param_count);
 }
 
 //it will add an void param string to log item

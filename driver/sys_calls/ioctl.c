@@ -24,27 +24,26 @@ long fake_sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg)
 	bool log_ok = false;
 	long result = 0;
 
-	notify_enter();
-
 	trace_dog_enter(api_sys_ioctl);
 
-	log_ok = begin_log_system_call(op_io_control_file, api_sys_ioctl, NULL, 3);
-	
-	if (log_ok)
-	{
-		add_unsigned_int_param("fd", fd);
-		add_unsigned_int_param("cmd", cmd);
-		add_unsigned_int_param("arg", arg);
-	}
+	//notify_enter();
+
+	//log_ok = begin_log_system_call_by_fd(op_io_control_file, api_sys_ioctl, fd, 3);
+	//if (log_ok)
+	//{
+	//	add_unsigned_int_param("fd", fd);
+	//	add_unsigned_int_param("cmd", cmd);
+	//	add_unsigned_int_param("arg", arg);
+	//}
 	
 	result = original_sys_ioctl(fd, cmd, arg);
 	
-	if (log_ok)
-	{
-		end_log_system_call(result);
-	}
+	//if (log_ok)
+	//{
+	//	end_log_system_call(result);
+	//}
 
-	trace_dog_leave(api_sys_ioctl);
+	//trace_dog_leave(api_sys_ioctl);
 	
 	return result;
 }
